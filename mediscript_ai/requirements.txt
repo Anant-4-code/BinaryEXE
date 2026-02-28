@@ -11,9 +11,11 @@ passlib[bcrypt]
 python-jose[cryptography]
 python-dotenv
 Pillow
+pillow-avif-plugin
 rapidfuzz
 reportlab
 pydantic-settings
 pytest
 google-generativeai
 httpx
+deep-translator

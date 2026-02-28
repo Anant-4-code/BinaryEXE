@@ -16,6 +16,32 @@ FREQUENCY_MAP: Dict[str, int] = {
     "bd": 2,
     "tds": 3,
     "qid": 4,
+    "once daily": 1,
+    "twice daily": 2,
+    "three times daily": 3,
+    "four times daily": 4,
+    "q4h": 6,
+    "q6h": 4,
+    "hs": 1,
+}
+
+# People-friendly display names for frequency (no medical abbreviations)
+FREQUENCY_DISPLAY: Dict[str, str] = {
+    "od": "Once daily",
+    "bd": "Twice daily",
+    "bid": "Twice daily",
+    "tds": "Three times daily",
+    "tid": "Three times daily",
+    "qid": "Four times daily",
+    "q4h": "Every 4 hours",
+    "q6h": "Every 6 hours",
+    "hs": "At bedtime",
+    "prn": "As needed",
+    "sos": "If necessary",
+    "once daily": "Once daily",
+    "twice daily": "Twice daily",
+    "three times daily": "Three times daily",
+    "four times daily": "Four times daily",
 }
 
 
@@ -30,6 +56,7 @@ class ValidatedMedicine:
     instructions: str
     confidence: float
     drug_match_success: float
+    age_range: str = ""
 
 
 def normalize_drug_name(name: str) -> Tuple[str, float]:
@@ -62,11 +89,16 @@ def parse_duration(duration: str) -> int:
 
 
 def map_frequency(freq: str) -> Tuple[str, int]:
+    """Map frequency abbreviation to people-friendly string and times per day."""
     if not freq:
         return "", 0
     key = freq.lower().strip()
     per_day = FREQUENCY_MAP.get(key, 0)
-    return freq.upper(), per_day
+    display = FREQUENCY_DISPLAY.get(key)
+    if display:
+        return display, per_day
+    # Unknown abbreviation: return as-is but try to make it readable
+    return freq.strip(), per_day
 
 
 def validate_medicines(gemma_medicines: List[GemmaMedicine], ocr_reliability: float, json_parse_success: float) -> Tuple[List[ValidatedMedicine], float]:
@@ -84,6 +116,7 @@ def validate_medicines(gemma_medicines: List[GemmaMedicine], ocr_reliability: fl
             drug_score * 0.3
         ) * 100.0
 
+        age_range = getattr(item, "age_range", None) or ""
         validated.append(
             ValidatedMedicine(
                 original_name=item.medicine,
@@ -95,6 +128,7 @@ def validate_medicines(gemma_medicines: List[GemmaMedicine], ocr_reliability: fl
                 instructions=item.instructions,
                 confidence=medicine_confidence,
                 drug_match_success=drug_score * 100.0,
+                age_range=(age_range or "").strip(),
             )
         )
         total_drug_match += drug_score

@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "MediScript AI"
+    app_name: str = "Sanjeevani AI"
     debug: bool = True
 
     # Database

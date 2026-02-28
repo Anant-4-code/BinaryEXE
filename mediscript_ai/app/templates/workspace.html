@@ -2,14 +2,30 @@
 {% block content %}
 <div class="mb-4">
     <div class="flex items-center justify-between mb-4">
-        <div>
+        <div class="flex-1">
             <div class="flex items-center space-x-2">
                 <a href="/" class="text-xs text-gray-500 hover:text-gray-700">&larr; Back to Dashboard</a>
                 <span class="text-xs text-gray-400">/</span>
                 <span class="text-sm font-medium text-gray-700">Prescription #{{ prescription.id }}</span>
             </div>
-            <h1 class="text-xl font-bold mt-1">{{ prescription.title }}</h1>
-            <p class="text-xs text-gray-500">Created {{ prescription.created_at.strftime("%Y-%m-%d") }}</p>
+            <div id="prescription-meta-view">
+                <h1 class="text-xl font-bold mt-1">{{ prescription.title }}</h1>
+                {% if prescription.caption %}<p class="text-sm text-gray-600 mt-0.5">{{ prescription.caption }}</p>{% endif %}
+                <p class="text-xs text-gray-500">Created {{ prescription.created_at.strftime("%d %b %Y, %H:%M") }}</p>
+                <button type="button" onclick="document.getElementById('prescription-meta-view').classList.add('hidden'); document.getElementById('prescription-meta-edit').classList.remove('hidden');" class="mt-1 text-xs text-blue-600 hover:text-blue-800">Edit name &amp; caption</button>
+            </div>
+            <div id="prescription-meta-edit" class="hidden">
+                <form action="/workspace/{{ prescription.id }}/update-meta" method="post" class="space-y-2 max-w-md">
+                    <label class="block text-xs text-gray-600">Title</label>
+                    <input type="text" name="title" value="{{ prescription.title }}" required class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+                    <label class="block text-xs text-gray-600">Caption</label>
+                    <input type="text" name="caption" value="{{ prescription.caption or '' }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Short note">
+                    <div class="flex gap-2">
+                        <button type="submit" class="px-3 py-1.5 text-xs bg-green-600 text-white rounded-md">Save</button>
+                        <button type="button" onclick="document.getElementById('prescription-meta-view').classList.remove('hidden'); document.getElementById('prescription-meta-edit').classList.add('hidden');" class="px-3 py-1.5 text-xs bg-gray-200 text-gray-800 rounded-md">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
         <div class="flex items-center space-x-4">
             <span class="text-xs px-2 py-1 rounded-full
@@ -25,6 +41,19 @@
         </div>
     </div>
 
+    {% if prescription.confidence_score is defined and prescription.confidence_score < 60 %}
+    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <p class="text-sm text-amber-800 font-medium">⚠️ Low confidence — data may not be accurate</p>
+        <p class="text-xs text-amber-700 mt-1">This prescription has low confidence ({{ "%.1f"|format(prescription.confidence_score) }}%). The extracted data could be wrong because of: unclear handwriting or image quality, OCR errors, or medicine names the system could not match. Please verify the details before use.</p>
+    </div>
+    {% endif %}
+
+    <div class="max-w-7xl mx-auto">
+    {% if error %}
+    <div class="mb-4 p-3 rounded-md border border-red-200 bg-red-50 text-red-800 text-sm">
+        {{ error }}
+    </div>
+    {% endif %}
     <div class="border-b border-gray-200 mb-4">
         <nav class="-mb-px flex space-x-8">
             {% set tabs = [
@@ -51,6 +80,15 @@
     {% if tab == 'overview' %}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div class="lg:col-span-2 space-y-4">
+                {% if image_url %}
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="font-semibold text-sm">Uploaded Image Preview</h2>
+                        <a href="{{ image_url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800">Open</a>
+                    </div>
+                    <img src="{{ image_url }}" alt="Uploaded prescription image" class="w-full max-h-56 object-contain rounded-md border border-gray-200 bg-gray-50">
+                </div>
+                {% endif %}
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h2 class="font-semibold mb-3">Extracted Text (OCR)</h2>
                     {% if prescription.raw_text %}
@@ -67,43 +105,101 @@
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="font-semibold">Structured Prescription (AI)</h2>
-                        <form action="/workspace/{{ prescription.id }}/extract" method="post">
+                        <form action="/workspace/{{ prescription.id }}/refresh-all" method="post">
                             <button type="submit" class="px-3 py-1 text-xs bg-gray-900 text-white rounded-md">
-                                Run AI Extraction
+                                Refresh All
                             </button>
                         </form>
                     </div>
+                    <p class="text-xs text-gray-500 mb-3">Extract from OCR or edit each medicine below. Click &quot;Edit&quot; on a card to change name, dose, frequency, duration, instructions, and age range.</p>
                     {% if prescription.medicines %}
-                        <div class="space-y-3">
-                            {% for m in prescription.medicines %}
-                                <div class="border border-gray-200 rounded-md p-3
-                                    {% if m.confidence is defined and m.confidence < 60 %}bg-yellow-50{% endif %}">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <div>
-                                            <p class="font-semibold">{{ m.normalized_name or m.original_name }}</p>
-                                            {% if m.original_name %}
-                                                <p class="text-xs text-gray-500">{{ m.original_name }}</p>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div class="space-y-3">
+                                {% for m in prescription.medicines %}
+                                    <div class="medicine-card border border-gray-200 rounded-md p-3
+                                        {% if m.confidence is defined and m.confidence < 60 %}bg-amber-50 border-amber-200{% endif %}">
+                                        <div class="medicine-view">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <div>
+                                                    <p class="font-semibold">{{ m.normalized_name or m.original_name }}</p>
+                                                    {% if m.original_name and m.original_name != (m.normalized_name or '') %}
+                                                        <p class="text-xs text-gray-500">{{ m.original_name }}</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex items-center gap-1">
+                                                    {% if m.confidence is defined %}
+                                                    <span class="text-xs px-2 py-1 rounded-full
+                                                        {% if m.confidence >= 85 %}bg-green-100 text-green-700
+                                                        {% elif m.confidence >= 60 %}bg-yellow-100 text-yellow-700
+                                                        {% else %}bg-red-100 text-red-700{% endif %}">
+                                                        {{ "%.0f"|format(m.confidence) }}%
+                                                    </span>
+                                                    {% endif %}
+                                                    <button type="button" class="med-edit-btn px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Edit</button>
+                                                </div>
+                                            </div>
+                                            {% if m.confidence is defined and m.confidence < 60 %}
+                                            <p class="text-xs text-amber-700 mt-1 bg-amber-100/50 rounded px-2 py-1">⚠️ Low confidence — verify before use.</p>
+                                            {% endif %}
+                                            <p class="text-xs text-gray-600">
+                                                Dose: {{ m.dose or '—' }} |
+                                                Frequency: {{ m.frequency | format_frequency }} |
+                                                Duration: {{ m.duration_days or '—' }} days
+                                                {% if m.age_range %}
+                                                | Age range: {{ m.age_range }}
+                                                {% endif %}
+                                            </p>
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                {{ m.instructions or 'No instructions provided.' }}
+                                            </p>
+                                            {% if not m.explanation %}
+                                            <form action="/workspace/{{ prescription.id }}/medicine/{{ m.id }}/explain" method="post" class="mt-2">
+                                                <button type="submit" class="text-xs text-blue-600 hover:text-blue-800">Explain this medicine</button>
+                                            </form>
                                             {% endif %}
                                         </div>
-                                        {% if m.confidence is defined %}
-                                            <span class="text-xs px-2 py-1 rounded-full
-                                                {% if m.confidence >= 85 %}bg-green-100 text-green-700
-                                                {% elif m.confidence >= 60 %}bg-yellow-100 text-yellow-700
-                                                {% else %}bg-red-100 text-red-700{% endif %}">
-                                                {{ "%.0f"|format(m.confidence) }}%
-                                            </span>
+                                        <div class="medicine-edit hidden mt-2 pt-2 border-t border-gray-200">
+                                            <form action="/workspace/{{ prescription.id }}/medicine/{{ m.id }}/update" method="post" class="space-y-2">
+                                                <div><label class="block text-xs text-gray-600">Medicine name</label><input type="text" name="name" value="{{ m.normalized_name or m.original_name }}" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" required></div>
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <div><label class="block text-xs text-gray-600">Dose</label><input type="text" name="dose" value="{{ m.dose or '' }}" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="e.g. 500mg"></div>
+                                                    <div><label class="block text-xs text-gray-600">Frequency</label><input type="text" name="frequency" value="{{ m.frequency or '' }}" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="e.g. Twice daily"></div>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <div><label class="block text-xs text-gray-600">Duration (days)</label><input type="number" name="duration_days" value="{{ m.duration_days or '' }}" min="1" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="5"></div>
+                                                    <div><label class="block text-xs text-gray-600">Age range</label><input type="text" name="age_range" value="{{ m.age_range or '' }}" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="e.g. 10-24 years"></div>
+                                                </div>
+                                                <div><label class="block text-xs text-gray-600">Instructions</label><input type="text" name="instructions" value="{{ m.instructions or '' }}" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="After food, etc."></div>
+                                                <div class="flex gap-2">
+                                                    <button type="submit" class="px-3 py-1 text-xs bg-green-600 text-white rounded-md">Save</button>
+                                                    <button type="button" class="med-cancel-btn px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded-md">Cancel</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="font-semibold text-sm">Medicine Explanations</h3>
+                                    <p class="text-xs text-gray-500 mb-1">Brief explanation with medicine name and age range (max 500 characters).</p>
+                                    {% if prescription.medicines %}
+                                    <form action="/workspace/{{ prescription.id }}/explain-all-medicines" method="post">
+                                        <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md">Generate All</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                {% for m in prescription.medicines %}
+                                    <div class="border border-gray-100 rounded-md p-3 bg-blue-50/30">
+                                        <p class="font-semibold text-sm text-gray-800">{{ m.normalized_name or m.original_name }}</p>
+                                        {% if m.explanation %}
+                                            <p class="text-xs text-gray-700 mt-1 whitespace-pre-wrap">{{ m.explanation }}</p>
+                                        {% else %}
+                                            <p class="text-xs text-gray-500 italic">No explanation yet. Click "Explain this medicine" or "Generate All".</p>
                                         {% endif %}
                                     </div>
-                                    <p class="text-xs text-gray-600">
-                                        Dose: {{ m.dose or '—' }} |
-                                        Frequency: {{ m.frequency or '—' }} |
-                                        Duration: {{ m.duration_days or '—' }} days
-                                    </p>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        {{ m.instructions or 'No instructions provided.' }}
-                                    </p>
-                                </div>
-                            {% endfor %}
+                                {% endfor %}
+                            </div>
                         </div>
                     {% else %}
                         <p class="text-sm text-gray-500">
@@ -112,8 +208,128 @@
                         </p>
                     {% endif %}
                 </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <h2 class="font-semibold mb-3">Transliteration of the Structured Prescription (AI)</h2>
+                    <p class="text-xs text-gray-500 mb-3">Translate the full prescription into another language with proper native script (Devanagari, Telugu, Tamil, etc.). One language at a time. Uses Google Translate for accurate output.</p>
+                    <form action="/workspace/{{ prescription.id }}/transliterate" method="post" class="flex flex-wrap items-center gap-2">
+                        <select name="language" required class="text-sm border border-gray-300 rounded-md px-3 py-1.5">
+                            {% for value, label in transliteration_languages %}
+                            <option value="{{ value }}" {% if transliterated and transliterated.language == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-md">Transliterate</button>
+                    </form>
+                    {% if transliterated and transliterated.full %}
+                    <div class="mt-4 border border-indigo-100 rounded-md p-3 bg-indigo-50/30">
+                        <p class="text-xs font-semibold text-indigo-700 uppercase mb-2">Current: {{ transliterated.label }}</p>
+                        <pre class="text-sm text-gray-800 whitespace-pre-wrap" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Bengali', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Malayalam', 'Noto Sans Gurmukhi', sans-serif;">{{ transliterated.full }}</pre>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 mt-3">No transliteration yet. Select a language and click "Transliterate". Run AI Extraction and Patient/Doctor extraction first.</p>
+                    {% endif %}
+                </div>
             </div>
             <div class="space-y-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <h2 class="font-semibold">Patient &amp; Doctor Details</h2>
+                        <div class="flex items-center gap-2">
+                            {% if transliterated and (transliterated.patient or transliterated.doctor) %}
+                            <button type="button" onclick="document.querySelectorAll('.patient-original,.patient-transliterated,.doctor-original,.doctor-transliterated').forEach(el=>el.classList.toggle('hidden')); this.textContent = this.textContent.includes('Transliterated') ? 'Show Original' : 'Show Transliterated';"
+                                    class="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200">Show Transliterated</button>
+                            {% endif %}
+                            <button type="button" onclick="document.getElementById('patient-doctor-view').classList.toggle('hidden'); document.getElementById('patient-doctor-edit-form').classList.toggle('hidden');"
+                                    class="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">Edit or enter details</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Extract details from the prescription with AI, or enter/edit any field manually. Fill in missing details as needed.</p>
+
+                    <div id="patient-doctor-view">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="patient-details-box border border-gray-100 rounded-md p-3 bg-gray-50/50">
+                                <h3 class="font-medium text-sm text-gray-700 mb-2">Patient</h3>
+                                {% if patient_details and (patient_details.get('name') or patient_details.get('age') or patient_details.get('gender') or patient_details.get('address') or patient_details.get('phone') or patient_details.get('disease_or_condition') or patient_details.get('medicines_summary') or patient_details.get('other')) %}
+                                <div class="patient-original text-sm space-y-1">
+                                    {% if patient_details.get('name') %}<div><span class="text-gray-500">Name:</span> {{ patient_details.name }}</div>{% endif %}
+                                    {% if patient_details.get('age') %}<div><span class="text-gray-500">Age:</span> {{ patient_details.age }}</div>{% endif %}
+                                    {% if patient_details.get('gender') %}<div><span class="text-gray-500">Gender:</span> {{ patient_details.gender }}</div>{% endif %}
+                                    {% if patient_details.get('address') %}<div><span class="text-gray-500">Address:</span> {{ patient_details.address }}</div>{% endif %}
+                                    {% if patient_details.get('phone') %}<div><span class="text-gray-500">Phone:</span> {{ patient_details.phone }}</div>{% endif %}
+                                    {% if patient_details.get('disease_or_condition') %}<div><span class="text-gray-500">Disease/Condition:</span> {{ patient_details.disease_or_condition }}</div>{% endif %}
+                                    {% if patient_details.get('medicines_summary') %}<div><span class="text-gray-500">Medicines (from prescription):</span> {{ patient_details.medicines_summary }}</div>{% endif %}
+                                    {% if patient_details.get('other') %}<div><span class="text-gray-500">Other:</span> {{ patient_details.other }}</div>{% endif %}
+                                </div>
+                                {% if transliterated and transliterated.patient %}
+                                <div class="patient-transliterated hidden text-sm" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', sans-serif;">
+                                    <pre class="whitespace-pre-wrap text-gray-800">{{ transliterated.patient }}</pre>
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <p class="text-sm text-gray-500">No patient details yet. Use &quot;Run AI Extraction&quot; or &quot;Edit or enter details&quot; to add.</p>
+                                {% endif %}
+                            </div>
+                            <div class="doctor-details-box border border-gray-100 rounded-md p-3 bg-gray-50/50">
+                                <h3 class="font-medium text-sm text-gray-700 mb-2">Doctor</h3>
+                                {% if doctor_details and (doctor_details.get('name') or doctor_details.get('qualification') or doctor_details.get('specialization') or doctor_details.get('clinic_hospital') or doctor_details.get('address') or doctor_details.get('phone') or doctor_details.get('other')) %}
+                                <div class="doctor-original text-sm space-y-1">
+                                    {% if doctor_details.get('name') %}<div><span class="text-gray-500">Name:</span> {{ doctor_details.name }}</div>{% endif %}
+                                    {% if doctor_details.get('qualification') %}<div><span class="text-gray-500">Qualification:</span> {{ doctor_details.qualification }}</div>{% endif %}
+                                    {% if doctor_details.get('specialization') %}<div><span class="text-gray-500">Specialization:</span> {{ doctor_details.specialization }}</div>{% endif %}
+                                    {% if doctor_details.get('clinic_hospital') %}<div><span class="text-gray-500">Clinic/Hospital:</span> {{ doctor_details.clinic_hospital }}</div>{% endif %}
+                                    {% if doctor_details.get('address') %}<div><span class="text-gray-500">Address:</span> {{ doctor_details.address }}</div>{% endif %}
+                                    {% if doctor_details.get('phone') %}<div><span class="text-gray-500">Phone:</span> {{ doctor_details.phone }}</div>{% endif %}
+                                    {% if doctor_details.get('other') %}<div><span class="text-gray-500">Other:</span> {{ doctor_details.other }}</div>{% endif %}
+                                </div>
+                                {% if transliterated and transliterated.doctor %}
+                                <div class="doctor-transliterated hidden text-sm" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', sans-serif;">
+                                    <pre class="whitespace-pre-wrap text-gray-800">{{ transliterated.doctor }}</pre>
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <p class="text-sm text-gray-500">No doctor details yet. Use &quot;Run AI Extraction&quot; or &quot;Edit or enter details&quot; to add.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="patient-doctor-edit-form" class="hidden">
+                        <form action="/workspace/{{ prescription.id }}/update-patient-doctor" method="post" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50/30">
+                                    <h3 class="font-medium text-gray-800 mb-3">Patient details</h3>
+                                    <div class="space-y-2">
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Name</label><input type="text" name="patient_name" value="{{ patient_details.get('name', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Full name"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Age</label><input type="text" name="patient_age" value="{{ patient_details.get('age', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="e.g. 34 or 10-24 years"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Gender</label><input type="text" name="patient_gender" value="{{ patient_details.get('gender', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Male / Female / Other"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Address</label><input type="text" name="patient_address" value="{{ patient_details.get('address', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Full address"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Phone / Mobile</label><input type="text" name="patient_phone" value="{{ patient_details.get('phone', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Contact number"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Disease / Condition</label><input type="text" name="patient_disease_or_condition" value="{{ patient_details.get('disease_or_condition', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Diagnosis or condition"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Medicines (from prescription)</label><input type="text" name="patient_medicines_summary" value="{{ patient_details.get('medicines_summary', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Comma-separated medicine names"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Other</label><input type="text" name="patient_other" value="{{ patient_details.get('other', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Weight, ID, date, etc."></div>
+                                    </div>
+                                </div>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50/30">
+                                    <h3 class="font-medium text-gray-800 mb-3">Doctor details</h3>
+                                    <div class="space-y-2">
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Name</label><input type="text" name="doctor_name" value="{{ doctor_details.get('name', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Dr. name"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Qualification</label><input type="text" name="doctor_qualification" value="{{ doctor_details.get('qualification', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="MBBS, MD, etc."></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Specialization</label><input type="text" name="doctor_specialization" value="{{ doctor_details.get('specialization', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="e.g. General Physician"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Clinic / Hospital</label><input type="text" name="doctor_clinic_hospital" value="{{ doctor_details.get('clinic_hospital', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Clinic or hospital name"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Address</label><input type="text" name="doctor_address" value="{{ doctor_details.get('address', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Clinic address"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Phone / Mobile</label><input type="text" name="doctor_phone" value="{{ doctor_details.get('phone', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Contact number"></div>
+                                        <div><label class="block text-xs text-gray-600 mb-0.5">Other</label><input type="text" name="doctor_other" value="{{ doctor_details.get('other', '') }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" placeholder="Any other details"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">Save details</button>
+                                <button type="button" onclick="document.getElementById('patient-doctor-view').classList.remove('hidden'); document.getElementById('patient-doctor-edit-form').classList.add('hidden');" class="px-4 py-2 bg-gray-200 text-gray-800 text-sm rounded-md hover:bg-gray-300">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h2 class="font-semibold mb-2">Next Steps</h2>
                     <p class="text-sm text-gray-600">
@@ -125,23 +341,100 @@
 
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 class="font-semibold mb-2">Actions</h3>
-                    <form action="/workspace/{{ prescription.id }}/confirm" method="post">
+                    <form action="/workspace/{{ prescription.id }}/confirm" method="post" class="space-y-2">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Start date</label>
+                            <input type="date" name="start_date" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                        </div>
                         <button type="submit"
                                 class="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md">
                             Confirm &amp; Activate Schedule
+                        </button>
+                    </form>
+                    <form action="/upload/{{ prescription.id }}/delete" method="post" class="mt-3">
+                        <button type="submit"
+                                class="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md"
+                                onclick="return confirm('Are you sure you want to delete this prescription? This cannot be undone.');">
+                            Delete Prescription
                         </button>
                     </form>
                 </div>
             </div>
         </div>
     {% elif tab == 'calendar' %}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h2 class="font-semibold mb-2">Calendar (per prescription)</h2>
-            <p class="text-sm text-gray-600 mb-2">
-                Here you can render a monthly grid where each date cell shows the number of doses and their completion
-                state (green / yellow / red). Clicking a date would open a modal listing doses with “Mark as Taken”
-                toggles, wired to the `/calendar/doses/{dose_id}/toggle` endpoint.
-            </p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                    <div>
+                        <h2 class="font-semibold">Medication Schedule</h2>
+                        <p class="text-sm text-gray-600">Track your daily intake and stay consistent.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="cal-prev" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Prev</button>
+                        <button type="button" id="cal-today" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Today</button>
+                        <button type="button" id="cal-next" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Next</button>
+                        <div class="ml-2 text-sm font-semibold text-gray-800" id="cal-title"></div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-gray-200 bg-gray-50/30 p-2 sm:p-3">
+                    <div class="grid grid-cols-7 gap-1 sm:gap-2 text-[11px] sm:text-xs text-gray-600 mb-2">
+                        <div class="text-center">Sun</div>
+                        <div class="text-center">Mon</div>
+                        <div class="text-center">Tue</div>
+                        <div class="text-center">Wed</div>
+                        <div class="text-center">Thu</div>
+                        <div class="text-center">Fri</div>
+                        <div class="text-center">Sat</div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 sm:gap-2" id="cal-grid"></div>
+                </div>
+
+                <div class="mt-4 text-xs text-gray-600">
+                    <div class="flex flex-wrap gap-3">
+                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#1ABC9C"></span> Complete</div>
+                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#48C9B0"></span> Partial</div>
+                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#D1F2EB"></span> Future</div>
+                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#FCA5A5"></span> Missed</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 space-y-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <div class="text-xs text-teal-700 font-semibold" id="cal-side-date-label"></div>
+                            <div class="text-lg font-semibold text-gray-900" id="cal-side-title">Schedule</div>
+                        </div>
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:#D1F2EB;color:#0f766e;">📅</div>
+                    </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs text-gray-600">Update times for a medicine (future doses only)</div>
+                        <button type="button" id="cal-adjust-times" class="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50">Adjust Times</button>
+                    </div>
+                    <div class="space-y-2" id="cal-side-list">
+                        <div class="text-sm text-gray-600">Select a day to view doses.</div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div class="text-xs text-teal-700 font-semibold">Adherence</div>
+                    <div class="mt-1 flex items-end justify-between">
+                        <div>
+                            <div class="text-3xl font-semibold text-gray-900">{{ "%.0f"|format(analytics.adherence_percentage) }}%</div>
+                            <div class="text-xs text-gray-600">Total: {{ analytics.total_doses }} • Taken: {{ analytics.taken_doses }}</div>
+                        </div>
+                        <div class="w-14 h-10 rounded-md" style="background:#D1F2EB"></div>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-600">Streak: {{ analytics.current_streak }} day(s)</div>
+                </div>
+
+                <div class="rounded-lg border border-gray-200 p-4" style="background:#F0FDFA">
+                    <div class="text-sm font-semibold text-gray-900">Instruction Reminder</div>
+                    <div class="text-xs text-gray-700 mt-1">If you miss a dose, take it as soon as you remember. If it’s close to the next dose, skip and continue as scheduled.</div>
+                </div>
+            </div>
         </div>
     {% elif tab == 'analytics' %}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -164,24 +457,783 @@
                     <p class="text-xl font-semibold">{{ analytics.current_streak }}</p>
                 </div>
             </div>
-            <p class="text-sm text-gray-600">
-                Charts (line graph for daily completion and pie chart for taken/missed) can be added using a JS chart
-                library, driven by JSON APIs backed by the analytics service.
-            </p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-semibold text-gray-900 mb-2">Daily adherence (last 30 days)</div>
+                    <div class="relative h-56 sm:h-64">
+                        <canvas id="adherenceLine"></canvas>
+                    </div>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-semibold text-gray-900 mb-2">Taken vs missed (last 30 days)</div>
+                    <div class="relative h-56 sm:h-64">
+                        <canvas id="takenPie"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div id="analytics-root" data-prescription-id="{{ prescription.id }}" class="hidden"></div>
         </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+        (function() {
+            var root = document.getElementById('analytics-root');
+            var prescriptionId = root ? parseInt(root.getAttribute('data-prescription-id') || '0', 10) : 0;
+            var lineEl = document.getElementById('adherenceLine');
+            var pieEl = document.getElementById('takenPie');
+            if (!lineEl || !pieEl || !window.Chart) return;
+            if (!prescriptionId) return;
+
+            function fmtDay(iso) {
+                try {
+                    var d = new Date(iso + 'T00:00:00');
+                    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                } catch (e) {
+                    return iso;
+                }
+            }
+
+            fetch('/calendar/prescriptions/' + prescriptionId + '/analytics?days=30')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var series = (data && data.series) ? data.series : [];
+                    var totals = (data && data.totals) ? data.totals : { total: 0, taken: 0, missed: 0 };
+
+                    var labels = series.map(function(x) { return fmtDay(x.day); });
+                    var pct = series.map(function(x) { return Math.round((x.percentage || 0) * 10) / 10; });
+
+                    new Chart(lineEl.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Adherence %',
+                                data: pct,
+                                borderColor: '#0F766E',
+                                backgroundColor: 'rgba(15,118,110,0.12)',
+                                fill: true,
+                                tension: 0.35,
+                                pointRadius: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, max: 100 }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(ctx) { return (ctx.parsed.y || 0) + '%'; }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    new Chart(pieEl.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Taken', 'Missed'],
+                            datasets: [{
+                                data: [totals.taken || 0, totals.missed || 0],
+                                backgroundColor: ['#1ABC9C', '#FCA5A5'],
+                                borderWidth: 1,
+                                borderColor: '#ffffff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                })
+                .catch(function() { return; });
+        })();
+        </script>
     {% elif tab == 'export' %}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h2 class="font-semibold mb-2">Export</h2>
-            <p class="text-sm text-gray-600 mb-3">
-                Generate a PDF representation of this prescription, including medicines, schedule, and a verification
-                QR in future iterations.
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 max-w-2xl w-full">
+            <h2 class="font-semibold mb-2">Export Prescription as PDF</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Generate a formatted PDF with patient details, doctor details and medicines extracted by AI. If anything is missing, you can edit it below before exporting.
             </p>
-            <a href="/export/prescription/{{ prescription.id }}"
-               class="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium">
-                Download PDF
-            </a>
+
+            {% if saved %}
+            <div class="mb-4 p-3 rounded-md border border-green-200 bg-green-50 text-green-800 text-sm">
+                Export details saved.
+            </div>
+            {% endif %}
+
+            <div class="border border-gray-200 rounded-md p-3 bg-gray-50/40 mb-4 overflow-hidden">
+                <h3 class="font-semibold text-sm mb-2">Edit export details</h3>
+                <p class="text-xs text-gray-500 mb-3">These fields are used in the PDF layout. Medicines can be edited in the Overview tab.</p>
+                <form action="/workspace/{{ prescription.id }}/update-export-overrides" method="post" class="space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Date (shown on PDF)</label>
+                            <input type="text" name="export_date" value="{{ export_overrides.get('date', export_defaults.get('date', '')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="DD-MM-YYYY">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Time (shown on PDF)</label>
+                            <input type="text" name="export_time" value="{{ export_overrides.get('time', export_defaults.get('time', '')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="HH:MM">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="border border-gray-200 rounded-md p-3 bg-white">
+                            <h4 class="text-sm font-semibold text-teal-700 mb-2">Patient Information</h4>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Full Name</label>
+                                    <input type="text" name="patient_full_name" value="{{ export_overrides.get('patient', {}).get('full_name', patient_details.get('full_name', patient_details.get('name',''))) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Patient name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Age</label>
+                                        <input type="text" name="patient_age" value="{{ export_overrides.get('patient', {}).get('age', patient_details.get('age','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Age">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Gender</label>
+                                        <input type="text" name="patient_gender" value="{{ export_overrides.get('patient', {}).get('gender', patient_details.get('gender','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Gender">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Patient ID (optional)</label>
+                                    <input type="text" name="patient_patient_id" value="{{ export_overrides.get('patient', {}).get('patient_id', patient_details.get('patient_id','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Patient ID">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Contact (optional)</label>
+                                    <input type="text" name="patient_contact" value="{{ export_overrides.get('patient', {}).get('contact', patient_details.get('contact', patient_details.get('phone',''))) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Phone">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Address (optional)</label>
+                                    <input type="text" name="patient_address" value="{{ export_overrides.get('patient', {}).get('address', patient_details.get('address','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Address">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Allergies</label>
+                                    <input type="text" name="patient_allergies" value="{{ export_overrides.get('patient', {}).get('allergies', patient_details.get('allergies','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Allergies">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border border-gray-200 rounded-md p-3 bg-white">
+                            <h4 class="text-sm font-semibold text-teal-700 mb-2">Doctor Information</h4>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Doctor Name</label>
+                                    <input type="text" name="doctor_name" value="{{ export_overrides.get('doctor', {}).get('name', doctor_details.get('doctor_name', doctor_details.get('name',''))) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Doctor name">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Specialization</label>
+                                    <input type="text" name="doctor_specialization" value="{{ export_overrides.get('doctor', {}).get('specialization', doctor_details.get('specialization','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Specialization">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Registration / License No.</label>
+                                    <input type="text" name="doctor_license" value="{{ export_overrides.get('doctor', {}).get('license', doctor_details.get('registration_number', doctor_details.get('license_number',''))) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="License number">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Hospital / Clinic</label>
+                                    <input type="text" name="doctor_clinic" value="{{ export_overrides.get('doctor', {}).get('clinic', doctor_details.get('clinic', doctor_details.get('clinic_hospital',''))) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Clinic/Hospital">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Contact</label>
+                                    <input type="text" name="doctor_contact" value="{{ export_overrides.get('doctor', {}).get('contact', doctor_details.get('contact', doctor_details.get('phone',''))) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Phone">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Digital Signature Status</label>
+                                    <input type="text" name="doctor_signature_status" value="{{ export_overrides.get('doctor', {}).get('signature_status', doctor_details.get('digital_signature_status','')) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Signed / Not Signed">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Medicine explanation / instructions block (editable)</label>
+                        <textarea name="export_instructions_text" rows="5" class="w-full max-w-full border border-gray-300 rounded px-3 py-2 text-sm whitespace-pre-wrap" placeholder="Custom instructions / explanation list">{{ export_overrides.get('instructions_text', export_defaults.get('instructions_text', '')) }}</textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700">Save export details</button>
+                    </div>
+                </form>
+
+                <form action="/workspace/{{ prescription.id }}/refresh-export-overrides" method="post" class="mt-3">
+                    <button type="submit"
+                            class="px-4 py-2 bg-white border border-gray-300 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-50"
+                            onclick="return confirm('Refresh will overwrite all export fields with the latest AI-extracted data. Continue?');">
+                        Refresh (Overwrite)
+                    </button>
+                </form>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <form action="/export/prescription/{{ prescription.id }}" method="get">
+                    <button type="submit"
+                            class="inline-flex justify-center items-center px-4 py-3 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 w-full"
+                            style="display:block;width:100%;text-align:center;background:#1ABC9C;color:#ffffff;padding:12px 16px;border-radius:8px;text-decoration:none;font-weight:600;">
+                        Generate &amp; Download PDF
+                    </button>
+                </form>
+                <p class="text-xs text-gray-500 mt-2">PDF export is generated in English.</p>
+            </div>
         </div>
     {% endif %}
 </div>
+<script>
+document.querySelectorAll('.med-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var card = this.closest('.medicine-card');
+        card.querySelector('.medicine-view').classList.add('hidden');
+        card.querySelector('.medicine-edit').classList.remove('hidden');
+    });
+});
+document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var card = this.closest('.medicine-card');
+        card.querySelector('.medicine-view').classList.remove('hidden');
+        card.querySelector('.medicine-edit').classList.add('hidden');
+    });
+});
+
+// Calendar UI
+(function() {
+    var grid = document.getElementById('cal-grid');
+    if (!grid) return;
+
+    var titleEl = document.getElementById('cal-title');
+    var prevBtn = document.getElementById('cal-prev');
+    var nextBtn = document.getElementById('cal-next');
+    var todayBtn = document.getElementById('cal-today');
+    var prescriptionId = Number("{{ prescription.id }}");
+
+    var modal = document.createElement('div');
+    modal.id = 'cal-modal';
+    modal.className = 'fixed inset-0 hidden items-center justify-center';
+    modal.style.background = 'rgba(0,0,0,0.35)';
+    modal.innerHTML = '' +
+        '<div class="bg-white w-full max-w-lg mx-4 rounded-lg shadow-lg border border-gray-200">' +
+        '  <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">' +
+        '    <div class="font-semibold text-gray-800" id="cal-modal-title"></div>' +
+        '    <button type="button" class="text-sm px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" id="cal-modal-close">Close</button>' +
+        '  </div>' +
+        '  <div class="p-4" id="cal-modal-body"></div>' +
+        '</div>';
+    document.body.appendChild(modal);
+
+    var toast = document.createElement('div');
+    toast.id = 'cal-toast';
+    toast.className = 'fixed hidden';
+    toast.style.right = '16px';
+    toast.style.bottom = '16px';
+    toast.style.maxWidth = '420px';
+    toast.style.zIndex = '60';
+    toast.innerHTML = '<div class="border border-gray-200 bg-white shadow-lg rounded-md px-4 py-3 text-sm text-gray-800"></div>';
+    document.body.appendChild(toast);
+
+    function showToast(msg) {
+        try {
+            var box = toast.querySelector('div');
+            box.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(function() { toast.classList.add('hidden'); }, 3000);
+        } catch (e) {
+            return;
+        }
+    }
+
+    async function rescheduleMedicine(medicineId, timesCsv, startDayIso) {
+        var url = '/calendar/medicines/' + medicineId + '/reschedule?times=' + encodeURIComponent(timesCsv);
+        if (startDayIso) {
+            url += '&start_day=' + encodeURIComponent(startDayIso);
+        }
+        var resp = await fetch(url, { method: 'POST' });
+        if (!resp.ok) {
+            var msg = 'Failed to update schedule.';
+            try {
+                var data = await resp.json();
+                if (data && data.detail) msg = data.detail;
+            } catch (e) {
+                msg = 'Failed to update schedule.';
+            }
+            showToast(msg);
+            return null;
+        }
+        return await resp.json();
+    }
+
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function isoDate(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+    function monthTitle(d) {
+        return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    }
+
+    function fullDateLabel(d) {
+        return d.toLocaleString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    var cursor = new Date();
+    cursor.setHours(0,0,0,0);
+    var selectedIso = isoDate(new Date());
+
+    function dayColor(status) {
+        if (status === 'complete') return '#1ABC9C';
+        if (status === 'partial') return '#48C9B0';
+        if (status === 'future') return '#D1F2EB';
+        if (status === 'missed') return '#FCA5A5';
+        return '#F3F4F6';
+    }
+
+    function dotColor(status) {
+        if (status === 'complete') return '#0F766E';
+        if (status === 'partial') return '#48C9B0';
+        if (status === 'future') return '#A7F3D0';
+        if (status === 'missed') return '#F87171';
+        return '#9CA3AF';
+    }
+
+    async function fetchMonth(year, month) {
+        var resp = await fetch('/calendar/prescriptions/' + prescriptionId + '/month?year=' + year + '&month=' + month);
+        if (!resp.ok) return { days: {} };
+        return await resp.json();
+    }
+
+    async function fetchDay(dayIso) {
+        var resp = await fetch('/calendar/prescriptions/' + prescriptionId + '/day?day=' + encodeURIComponent(dayIso));
+        if (!resp.ok) return { items: [] };
+        return await resp.json();
+    }
+
+    async function toggleDose(doseId) {
+        var resp = await fetch('/calendar/doses/' + doseId + '/toggle', { method: 'POST' });
+        if (!resp.ok) {
+            var msg = 'Action not allowed.';
+            try {
+                var data = await resp.json();
+                if (data && data.detail) msg = data.detail;
+            } catch (e) {
+                msg = 'Action not allowed.';
+            }
+            showToast(msg);
+            return null;
+        }
+        return await resp.json();
+    }
+
+    var adjustBtn = document.getElementById('cal-adjust-times');
+    if (adjustBtn) {
+        adjustBtn.addEventListener('click', async function() {
+            var data = await fetchDay(selectedIso);
+            if (!data.items || !data.items.length) {
+                showToast('No doses found for the selected day.');
+                return;
+            }
+
+            var meds = {};
+            var timesByMed = {};
+            data.items.forEach(function(it) {
+                meds[it.medicine_id] = it.medicine_name;
+                if (!timesByMed[it.medicine_id]) timesByMed[it.medicine_id] = [];
+                if (it.time) timesByMed[it.medicine_id].push(it.time);
+            });
+            Object.keys(timesByMed).forEach(function(mid) {
+                var uniq = {};
+                timesByMed[mid].forEach(function(t) { uniq[t] = true; });
+                var arr = Object.keys(uniq);
+                arr.sort();
+                timesByMed[mid] = arr;
+            });
+            var medIds = Object.keys(meds);
+            if (!medIds.length) {
+                showToast('No medicines found.');
+                return;
+            }
+
+            var pick = medIds[0];
+
+            var html = '';
+            html += '<div class="text-sm text-gray-700 mb-3">Update times for a medicine (future doses only).</div>';
+            html += '<div class="space-y-3">';
+            html += '  <div>';
+            html += '    <label class="block text-xs text-gray-600 mb-1">Medicine</label>';
+            html += '    <select id="cal-resched-med" class="w-full border border-gray-300 rounded px-2 py-2 text-sm">';
+            medIds.forEach(function(id) {
+                var name = meds[id];
+                html += '      <option value="' + id + '" ' + (String(id) === String(pick) ? 'selected' : '') + '>' + name + '</option>';
+            });
+            html += '    </select>';
+            html += '  </div>';
+            html += '  <div>';
+            html += '    <label class="block text-xs text-gray-600 mb-1">New times (comma-separated HH:MM)</label>';
+            html += '    <input id="cal-resched-times" type="text" class="w-full border border-gray-300 rounded px-2 py-2 text-sm" placeholder="08:00,14:00,20:00">';
+            html += '    <div class="text-[11px] text-gray-500 mt-1">Times count must match doses-per-day for that medicine.</div>';
+            html += '  </div>';
+            html += '  <div class="flex items-center justify-end gap-2 pt-1">';
+            html += '    <button type="button" id="cal-resched-cancel" class="px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50">Cancel</button>';
+            html += '    <button type="button" id="cal-resched-save" class="px-3 py-2 text-sm rounded bg-teal-600 text-white hover:bg-teal-700">Save</button>';
+            html += '  </div>';
+            html += '</div>';
+
+            document.getElementById('cal-modal-title').textContent = 'Adjust Times';
+            var body = document.getElementById('cal-modal-body');
+            body.innerHTML = html;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            var medSelInit = document.getElementById('cal-resched-med');
+            var timesInit = document.getElementById('cal-resched-times');
+            if (timesInit && timesByMed[pick] && timesByMed[pick].length) {
+                timesInit.value = timesByMed[pick].join(',');
+            }
+            if (medSelInit && timesInit) {
+                medSelInit.addEventListener('change', function() {
+                    var mid = this.value;
+                    if (timesByMed[mid] && timesByMed[mid].length) {
+                        timesInit.value = timesByMed[mid].join(',');
+                    } else {
+                        timesInit.value = '';
+                    }
+                });
+            }
+
+            var cancelBtn = document.getElementById('cal-resched-cancel');
+            var saveBtn = document.getElementById('cal-resched-save');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function() {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                });
+            }
+            if (saveBtn) {
+                saveBtn.addEventListener('click', async function() {
+                    var medSel = document.getElementById('cal-resched-med');
+                    var timesInput = document.getElementById('cal-resched-times');
+                    var medId = medSel ? medSel.value : pick;
+                    var timesCsv = timesInput ? timesInput.value : '';
+                    if (!timesCsv || !timesCsv.trim()) {
+                        showToast('Please enter times like 08:00,14:00,20:00');
+                        return;
+                    }
+                    this.disabled = true;
+                    var res = await rescheduleMedicine(medId, timesCsv, selectedIso);
+                    this.disabled = false;
+                    if (!res) return;
+                    showToast('Schedule updated: ' + (res.times ? res.times.join(', ') : ''));
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    await render();
+                    await renderSidePanel(selectedIso);
+                });
+            }
+        });
+    }
+
+    function canMarkTakenWindow(item, dayIso) {
+        var todayIso = isoDate(new Date());
+        if (dayIso !== todayIso) {
+            return { ok: false, reason: 'You can only mark doses on their scheduled day.' };
+        }
+
+        if (item && item.taken) {
+            return { ok: true, reason: '' };
+        }
+
+        if (!item || !item.time) {
+            return { ok: true, reason: '' };
+        }
+
+        var parts = String(item.time).split(':');
+        var hh = parseInt(parts[0] || '0', 10) || 0;
+        var mm = parseInt(parts[1] || '0', 10) || 0;
+        var now = new Date();
+        var sched = new Date();
+        sched.setHours(hh, mm, 0, 0);
+        var earliest = new Date(sched.getTime() - (60 * 60 * 1000));
+        if (now < earliest) {
+            return { ok: false, reason: 'You can mark this dose as taken only within 1 hour before its scheduled time.' };
+        }
+        return { ok: true, reason: '' };
+    }
+
+    async function openDayModal(dayIso) {
+        document.getElementById('cal-modal-title').textContent = dayIso;
+        var body = document.getElementById('cal-modal-body');
+        body.innerHTML = '<div class="text-sm text-gray-600">Loading...</div>';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        var data = await fetchDay(dayIso);
+        if (!data.items || data.items.length === 0) {
+            body.innerHTML = '<div class="text-sm text-gray-600">No doses scheduled for this day.</div>';
+            return;
+        }
+
+        function partOfDay(hhmm) {
+            var h = 0;
+            try { h = parseInt((hhmm || '0:0').split(':')[0], 10) || 0; } catch(e) { h = 0; }
+            if (h >= 5 && h < 12) return 'Morning';
+            if (h >= 12 && h < 17) return 'Afternoon';
+            if (h >= 17 && h < 21) return 'Evening';
+            return 'Night';
+        }
+
+        var groups = { Morning: [], Afternoon: [], Evening: [], Night: [] };
+        data.items.forEach(function(it) {
+            groups[partOfDay(it.time)].push(it);
+        });
+
+        var todayIso = isoDate(new Date());
+        var allowToggle = (dayIso === todayIso);
+
+        var html = '';
+        if (!allowToggle) {
+            html += '<div class="mb-3 text-xs text-gray-600">Marking is disabled for past/future dates to keep adherence accurate. You can only mark doses on their scheduled day.</div>';
+        } else {
+            html += '<div class="mb-3 text-xs text-gray-600">You can mark a dose as taken starting 1 hour before its scheduled time.</div>';
+        }
+        ['Morning','Afternoon','Evening','Night'].forEach(function(g) {
+            if (!groups[g].length) return;
+            html += '<div class="mb-3">' +
+                '<div class="text-xs font-semibold text-gray-700 mb-2">' + g + '</div>' +
+                '<div class="space-y-2">';
+            groups[g].forEach(function(it) {
+                var statusText = it.taken ? (it.late ? 'Taken (Late)' : 'Taken') : (it.missed ? 'Missed' : 'Pending');
+                var badgeBg = it.taken ? '#1ABC9C' : (it.missed ? '#FCA5A5' : '#D1F2EB');
+                var badgeColor = it.taken ? '#ffffff' : '#111827';
+                var meta = '';
+                if (it.frequency) meta += it.frequency;
+                if (it.duration_days && it.duration_days > 0) meta += (meta ? ' • ' : '') + (it.duration_days + ' days');
+                var gate = canMarkTakenWindow(it, dayIso);
+                var disableBtn = (!allowToggle) || (!gate.ok);
+                var reason = (!allowToggle) ? 'You can only mark doses on their scheduled day.' : (gate.reason || '');
+                html += '' +
+                    '<div class="border border-gray-200 rounded-md p-3 flex items-start justify-between gap-3">' +
+                    '  <div>' +
+                    '    <div class="text-sm font-semibold text-gray-900">' + it.medicine_name + '</div>' +
+                    '    <div class="text-xs text-gray-600 mt-0.5">' + it.time + (meta ? (' • ' + meta) : '') + '</div>' +
+                    '    <div class="inline-block mt-2 px-2 py-0.5 rounded text-xs" style="background:' + badgeBg + ';color:' + badgeColor + '">' + statusText + '</div>' +
+                    (disableBtn && !it.taken ? ('    <div class="text-[11px] text-gray-500 mt-1">' + reason + '</div>') : '') +
+                    '  </div>' +
+                    '  <button type="button" data-dose-id="' + it.dose_id + '" class="cal-toggle-btn px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50" ' + (disableBtn ? 'disabled' : '') + '>' + (it.taken ? 'Mark Pending' : 'Mark Taken') + '</button>' +
+                    '</div>';
+            });
+            html += '</div></div>';
+        });
+        body.innerHTML = html;
+
+        body.querySelectorAll('.cal-toggle-btn').forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+                if (this.disabled) return;
+                var id = this.getAttribute('data-dose-id');
+                this.disabled = true;
+                await toggleDose(id);
+                await render();
+                await openDayModal(dayIso);
+            });
+        });
+    }
+
+    async function renderSidePanel(dayIso) {
+        var sideTitle = document.getElementById('cal-side-title');
+        var sideLabel = document.getElementById('cal-side-date-label');
+        var sideList = document.getElementById('cal-side-list');
+        if (!sideTitle || !sideLabel || !sideList) return;
+
+        var d = new Date(dayIso + 'T00:00:00');
+        sideLabel.textContent = fullDateLabel(d).toUpperCase();
+
+        var todayIso = isoDate(new Date());
+        var allowToggle = (dayIso === todayIso);
+        sideTitle.textContent = (dayIso === todayIso) ? "Today's Schedule" : 'Schedule';
+
+        sideList.innerHTML = '<div class="text-sm text-gray-600">Loading...</div>';
+        var data = await fetchDay(dayIso);
+        if (!data.items || data.items.length === 0) {
+            sideList.innerHTML = '<div class="text-sm text-gray-600">No doses scheduled for this day.</div>';
+            return;
+        }
+
+        function partOfDay(hhmm) {
+            var h = 0;
+            try { h = parseInt((hhmm || '0:0').split(':')[0], 10) || 0; } catch(e) { h = 0; }
+            if (h >= 5 && h < 12) return 'Morning';
+            if (h >= 12 && h < 17) return 'Afternoon';
+            if (h >= 17 && h < 21) return 'Evening';
+            return 'Night';
+        }
+
+        var groups = { Morning: [], Afternoon: [], Evening: [], Night: [] };
+        data.items.forEach(function(it) {
+            groups[partOfDay(it.time)].push(it);
+        });
+
+        var html = '';
+        if (!allowToggle) {
+            html += '<div class="mb-3 text-xs text-gray-600">Marking is disabled for past/future dates to keep adherence accurate. You can only mark doses on their scheduled day.</div>';
+        } else {
+            html += '<div class="mb-3 text-xs text-gray-600">You can mark a dose as taken starting 1 hour before its scheduled time.</div>';
+        }
+        ['Morning','Afternoon','Evening','Night'].forEach(function(g) {
+            if (!groups[g].length) return;
+            html += '<div class="mb-3">' +
+                '<div class="text-xs font-semibold text-gray-700 mb-2">' + g + '</div>' +
+                '<div class="space-y-2">';
+
+            groups[g].forEach(function(it) {
+                var statusText = it.taken ? (it.late ? 'Taken (Late)' : 'Taken') : (it.missed ? 'Missed' : 'Upcoming');
+                var subText = it.taken
+                    ? ('Taken at ' + (it.taken_at ? new Date(it.taken_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : it.time))
+                    : ('Scheduled: ' + it.time);
+                var meta = '';
+                if (it.frequency) meta += it.frequency;
+                if (it.duration_days && it.duration_days > 0) meta += (meta ? ' • ' : '') + (it.duration_days + ' days');
+                if (meta) subText += ' • ' + meta;
+
+                var pillBg = it.taken ? '#1ABC9C' : (it.missed ? '#FCA5A5' : '#D1F2EB');
+                var pillColor = it.taken ? '#ffffff' : '#111827';
+
+                var gate = canMarkTakenWindow(it, dayIso);
+                var disableBtn = (!allowToggle) || (!gate.ok);
+                var reason = (!allowToggle) ? 'You can only mark doses on their scheduled day.' : (gate.reason || '');
+
+                html += '' +
+                    '<div class="border border-gray-200 rounded-md p-3 flex items-center justify-between gap-3">' +
+                    '  <div>' +
+                    '    <div class="text-sm font-semibold text-gray-900">' + it.medicine_name + '</div>' +
+                    '    <div class="text-xs text-gray-600">' + subText + '</div>' +
+                    '    <div class="inline-block mt-2 px-2 py-0.5 rounded text-xs" style="background:' + pillBg + ';color:' + pillColor + '">' + statusText + '</div>' +
+                    (disableBtn && !it.taken ? ('    <div class="text-[11px] text-gray-500 mt-1">' + reason + '</div>') : '') +
+                    '  </div>' +
+                    '  <button type="button" data-dose-id="' + it.dose_id + '" class="cal-side-toggle px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50" ' + (disableBtn ? 'disabled' : '') + '>' + (it.taken ? 'Undo' : 'Mark Taken') + '</button>' +
+                    '</div>';
+            });
+
+            html += '</div></div>';
+        });
+        sideList.innerHTML = html;
+
+        sideList.querySelectorAll('.cal-side-toggle').forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+                if (this.disabled) return;
+                var id = this.getAttribute('data-dose-id');
+                this.disabled = true;
+                await toggleDose(id);
+                await render();
+                await renderSidePanel(dayIso);
+            });
+        });
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'cal-modal-close') closeModal();
+    });
+
+    async function render() {
+        var year = cursor.getFullYear();
+        var month = cursor.getMonth();
+        titleEl.textContent = monthTitle(cursor);
+        grid.innerHTML = '';
+
+        var summary = await fetchMonth(year, month + 1);
+        var days = (summary && summary.days) ? summary.days : {};
+
+        // Only highlight/select days that actually have scheduled doses.
+        if (!days[selectedIso]) {
+            var keys = Object.keys(days);
+            if (keys.length) {
+                selectedIso = keys.sort()[0];
+            }
+        }
+
+        var first = new Date(year, month, 1);
+        var startDow = first.getDay();
+        var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (var i = 0; i < startDow; i++) {
+            var empty = document.createElement('div');
+            empty.className = 'h-16 sm:h-20 rounded border border-transparent';
+            grid.appendChild(empty);
+        }
+
+        for (var day = 1; day <= daysInMonth; day++) {
+            var d = new Date(year, month, day);
+            var iso = isoDate(d);
+            var info = days[iso] || null;
+            var total = info ? info.total : 0;
+            var taken = info ? info.taken : 0;
+            var hasDoses = !!(info && total > 0);
+            var status = hasDoses ? info.status : 'neutral';
+
+            var dots = '';
+            if (info && info.medicines && info.medicines.length) {
+                dots = '<div class="mt-2 flex flex-wrap gap-1">' + info.medicines.slice(0, 10).map(function(m) {
+                    return '<span title="' + (m.medicine_name || '') + '" class="inline-block w-2 h-2 rounded-full" style="background:' + dotColor(m.status) + '"></span>';
+                }).join('') + '</div>';
+            }
+
+            var cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'h-16 sm:h-20 rounded border border-gray-200 p-1 sm:p-2 text-left focus:outline-none';
+            cell.style.background = hasDoses ? dayColor(status) : '#ffffff';
+            if (hasDoses) {
+                cell.className += ' hover:shadow-sm';
+            } else {
+                cell.disabled = true;
+                cell.className += ' opacity-60 cursor-not-allowed';
+            }
+            if (hasDoses && iso === selectedIso) {
+                cell.style.outline = '2px solid #0F766E';
+                cell.style.outlineOffset = '2px';
+            }
+            cell.innerHTML = '' +
+                '<div class="flex items-center justify-between">' +
+                '  <div class="text-[11px] sm:text-xs font-semibold" style="color:#111827">' + day + '</div>' +
+                '  <div class="text-[10px] sm:text-[11px]" style="color:#111827">' + (total ? (taken + '/' + total) : '') + '</div>' +
+                '</div>' +
+                '<div class="mt-1 sm:mt-2 text-[10px] sm:text-[11px]" style="color:#111827">' + (total ? (total + ' doses') : '') + '</div>' +
+                dots;
+
+            cell.addEventListener('click', function(isoCopy) {
+                return async function() {
+                    selectedIso = isoCopy;
+                    await render();
+                    await renderSidePanel(isoCopy);
+                    if (window.innerWidth < 640) {
+                        openDayModal(isoCopy);
+                    }
+                };
+            }(iso));
+
+            grid.appendChild(cell);
+        }
+    }
+
+    prevBtn.addEventListener('click', function() {
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+        render().then(function() { renderSidePanel(selectedIso); });
+    });
+    nextBtn.addEventListener('click', function() {
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+        render().then(function() { renderSidePanel(selectedIso); });
+    });
+    todayBtn.addEventListener('click', function() {
+        var t = new Date();
+        cursor = new Date(t.getFullYear(), t.getMonth(), 1);
+        selectedIso = isoDate(new Date());
+        render().then(function() { renderSidePanel(selectedIso); });
+    });
+
+    render().then(function() { renderSidePanel(selectedIso); });
+})();
+</script>
 {% endblock %}
 

@@ -31,6 +31,7 @@ class MedicineBase(BaseModel):
     duration_days: Optional[int] = None
     instructions: Optional[str] = None
     confidence: float
+    age_range: Optional[str] = None
 
 
 class MedicineCreate(MedicineBase):
@@ -106,9 +107,15 @@ class GemmaMedicine(BaseModel):
     frequency: str
     duration: str
     instructions: str
+    age_range: Optional[str] = ""
 
 
 class ExtractionResult(BaseModel):
     medicines: List[GemmaMedicine]
     json_parse_success: float
+
+
+class PatientDoctorExtraction(BaseModel):
+    patient: dict
+    doctor: dict
 

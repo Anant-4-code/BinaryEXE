@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ title or "MediScript AI" }}</title>
+    <title>{{ title or "Sanjeevani AI" }}</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Tamil:wght@400;700&family=Noto+Sans+Telugu:wght@400;700&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Kannada:wght@400;700&family=Noto+Sans+Gujarati:wght@400;700&family=Noto+Sans+Malayalam:wght@400;700&family=Noto+Sans+Gurmukhi:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-50 text-gray-900">
 <div class="min-h-screen">
@@ -11,7 +12,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <a href="/" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back to Dashboard</a>
-                <span class="font-semibold text-lg">MediScript AI</span>
+                <span class="font-semibold text-lg">Sanjeevani AI</span>
             </div>
             <div class="flex items-center space-x-4">
                 <button class="relative">
@@ -23,6 +24,178 @@
             </div>
         </div>
     </header>
+
+    <div id="global-loader" class="fixed inset-0 hidden items-center justify-center" style="background: rgba(2,6,23,0.35); z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div class="global-glass-card rounded-2xl shadow-lg px-6 py-5 flex items-center gap-4">
+            <div class="global-physics-loader" aria-label="Loading">
+                <span class="blob b1"></span>
+                <span class="blob b2"></span>
+                <span class="blob b3"></span>
+            </div>
+            <div>
+                <div class="text-sm font-semibold text-gray-900">Buffering</div>
+                <div class="text-xs text-gray-700 mt-0.5">Please wait…</div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        :root{
+            --aqua-1:#1ABC9C;
+            --aqua-2:#17A589;
+            --aqua-3:#48C9B0;
+            --aqua-4:#D1F2EB;
+        }
+
+        .global-glass-card{
+            position: relative;
+            background: rgba(255,255,255,0.78);
+            border: 1px solid rgba(255,255,255,0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            overflow: hidden;
+        }
+
+        .global-glass-card::before{
+            content:"";
+            position:absolute;
+            inset:-60px;
+            background:
+                radial-gradient(closest-side, rgba(26,188,156,0.22), rgba(26,188,156,0) 70%),
+                radial-gradient(closest-side, rgba(72,201,176,0.18), rgba(72,201,176,0) 70%),
+                radial-gradient(closest-side, rgba(209,242,235,0.18), rgba(209,242,235,0) 70%);
+            filter: blur(6px);
+            opacity: 0.95;
+            animation: glassDrift 3.6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .global-glass-card > *{ position: relative; z-index: 1; }
+
+        @keyframes glassDrift{
+            0%{ transform: translate3d(-14px,-8px,0) rotate(0deg); }
+            50%{ transform: translate3d(12px,10px,0) rotate(2deg); }
+            100%{ transform: translate3d(-14px,-8px,0) rotate(0deg); }
+        }
+
+        .global-physics-loader{
+            width: 64px;
+            height: 30px;
+            position: relative;
+            filter: drop-shadow(0 10px 18px rgba(15, 118, 110, 0.28));
+        }
+
+        .global-physics-loader .blob{
+            position:absolute;
+            top: 50%;
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            transform: translateY(-50%);
+            background: radial-gradient(circle at 30% 30%, var(--aqua-4), var(--aqua-1));
+            box-shadow:
+                inset 0 -2px 6px rgba(15,118,110,0.22),
+                0 6px 16px rgba(26,188,156,0.20);
+            animation: blobSpring 1.1s cubic-bezier(.34,1.56,.64,1) infinite;
+        }
+
+        .global-physics-loader .b1{ left: 0px; animation-delay: 0ms; }
+        .global-physics-loader .b2{ left: 22px; animation-delay: 120ms; background: radial-gradient(circle at 30% 30%, var(--aqua-4), var(--aqua-3)); }
+        .global-physics-loader .b3{ left: 44px; animation-delay: 240ms; background: radial-gradient(circle at 30% 30%, var(--aqua-4), var(--aqua-2)); }
+
+        @keyframes blobSpring{
+            0%{ transform: translateY(-50%) translateY(0px) scale(1,1); filter: blur(0px); }
+            35%{ transform: translateY(-50%) translateY(-10px) scale(1.18,0.86); filter: blur(0px); }
+            65%{ transform: translateY(-50%) translateY(6px) scale(0.92,1.12); filter: blur(0px); }
+            100%{ transform: translateY(-50%) translateY(0px) scale(1,1); filter: blur(0px); }
+        }
+    </style>
+
+    <script>
+    (function() {
+        var loader = document.getElementById('global-loader');
+        if (!loader) return;
+
+        var pending = 0;
+        var showTimer = null;
+        var minShowMs = 250;
+        var lastShowAt = 0;
+
+        function _show() {
+            if (pending <= 0) return;
+            if (showTimer) return;
+            showTimer = setTimeout(function() {
+                showTimer = null;
+                if (pending > 0) {
+                    lastShowAt = Date.now();
+                    loader.classList.remove('hidden');
+                    loader.classList.add('flex');
+                }
+            }, 150);
+        }
+
+        function _hide() {
+            if (pending > 0) return;
+            if (showTimer) {
+                clearTimeout(showTimer);
+                showTimer = null;
+            }
+            var elapsed = Date.now() - lastShowAt;
+            var wait = elapsed < minShowMs ? (minShowMs - elapsed) : 0;
+            setTimeout(function() {
+                if (pending === 0) {
+                    loader.classList.add('hidden');
+                    loader.classList.remove('flex');
+                }
+            }, wait);
+        }
+
+        window.__loaderStart = function() {
+            pending += 1;
+            _show();
+        };
+        window.__loaderEnd = function() {
+            pending = Math.max(0, pending - 1);
+            _hide();
+        };
+
+        var origFetch = window.fetch;
+        if (origFetch) {
+            window.fetch = function() {
+                window.__loaderStart();
+                try {
+                    return origFetch.apply(this, arguments)
+                        .then(function(resp) {
+                            window.__loaderEnd();
+                            return resp;
+                        })
+                        .catch(function(err) {
+                            window.__loaderEnd();
+                            throw err;
+                        });
+                } catch (e) {
+                    window.__loaderEnd();
+                    throw e;
+                }
+            };
+        }
+
+        document.addEventListener('submit', function(e) {
+            try {
+                var form = e.target;
+                if (!form || form.getAttribute('method') && form.getAttribute('method').toLowerCase() === 'dialog') return;
+                window.__loaderStart();
+            } catch (err) {
+                return;
+            }
+        }, true);
+
+        window.addEventListener('pageshow', function() {
+            pending = 0;
+            _hide();
+        });
+    })();
+    </script>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {% block content %}{% endblock %}
