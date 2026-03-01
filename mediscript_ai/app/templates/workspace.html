@@ -4,7 +4,7 @@
     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
         <div class="flex-1 min-w-0">
             <div class="flex items-center space-x-2">
-                <a href="/" class="text-xs text-gray-500 hover:text-gray-700">&larr; Back to Dashboard</a>
+                <a href="/dashboard" class="text-xs text-gray-500 hover:text-gray-700">&larr; Back to Dashboard</a>
                 <span class="text-xs text-gray-400">/</span>
                 <span class="text-sm font-medium text-gray-700">Prescription #{{ prescription.id }}</span>
             </div>
@@ -390,7 +390,8 @@
                             <input type="date" name="start_date" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
                         </div>
                         <button type="submit"
-                                class="w-full px-4 py-3 bg-teal-600 text-white text-sm font-medium rounded-lg">
+                                class="w-full px-4 py-3 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg"
+                                style="background:#1ABC9C;">
                             Confirm &amp; Activate Schedule
                         </button>
                     </form>
@@ -480,41 +481,80 @@
             </div>
         </div>
     {% elif tab == 'analytics' %}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h2 class="font-semibold mb-4">Analytics</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div class="bg-gray-50 rounded-md p-3">
-                    <p class="text-xs text-gray-500">Total Doses</p>
-                    <p class="text-xl font-semibold">{{ analytics.total_doses }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-md p-3">
-                    <p class="text-xs text-gray-500">Taken Doses</p>
-                    <p class="text-xl font-semibold">{{ analytics.taken_doses }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-md p-3">
-                    <p class="text-xs text-gray-500">Adherence</p>
-                    <p class="text-xl font-semibold">{{ "%.1f"|format(analytics.adherence_percentage) }}%</p>
-                </div>
-                <div class="bg-gray-50 rounded-md p-3">
-                    <p class="text-xs text-gray-500">Current Streak (days)</p>
-                    <p class="text-xl font-semibold">{{ analytics.current_streak }}</p>
+        <div class="space-y-7" style="row-gap:28px;">
+            <div class="rounded-2xl border border-gray-200 p-7" style="background: linear-gradient(135deg, #F7FBFA 0%, #D1F2EB 100%);">
+                <div class="flex items-start justify-between flex-wrap gap-5">
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-semibold tracking-widest uppercase" style="color:#1ABC9C;">Medical Analytics</div>
+                        <div class="mt-2 text-3xl font-bold text-gray-900">Patient Adherence Summary</div>
+                        <div class="mt-1 text-sm text-gray-700">Prescription: <span class="font-semibold">{{ prescription.title }}</span></div>
+                        <div class="text-xs text-gray-600 mt-1">Created {{ prescription.created_at.strftime("%d %b %Y, %H:%M") }}</div>
+                    </div>
+
+                    <div class="w-full sm:w-80 rounded-2xl border border-gray-200 bg-white/70 backdrop-blur p-5">
+                        {% set conf = (prescription.confidence_score or 0) %}
+                        {% if conf < 60 %}
+                            {% set conf_color = "#F59E0B" %}
+                        {% else %}
+                            {% set conf_color = "#1ABC9C" %}
+                        {% endif %}
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm font-semibold text-gray-900">Confidence Score</div>
+                            <div class="text-sm font-bold {% if conf < 60 %}text-amber-500{% else %}text-teal-600{% endif %}">{{ "%.0f"|format(conf) }}%</div>
+                        </div>
+                        <div class="mt-3 h-2 rounded-full" style="background:#E5E7EB"></div>
+                        <div class="-mt-2 h-2 rounded-full" data-conf-bar="1" data-conf="{{ conf }}" data-conf-color="{{ conf_color }}" style="width:0"></div>
+                        {% if conf < 60 %}
+                        <div class="mt-3 text-xs text-amber-700">
+                            <span class="font-semibold">Amber Alert:</span> Score below 60%
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="text-sm font-semibold text-gray-900 mb-2">Daily adherence (last 30 days)</div>
-                    <div class="relative h-56 sm:h-64">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm dash-card--hover">
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Total Doses</div>
+                    <div class="mt-2 text-3xl font-bold text-gray-900" data-countup="1" data-value="{{ analytics.total_doses }}">0</div>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm dash-card--hover">
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Taken Doses</div>
+                    <div class="mt-2 text-3xl font-bold text-gray-900" data-countup="1" data-value="{{ analytics.taken_doses }}">0</div>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm dash-card--hover">
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Adherence</div>
+                    <div class="mt-2 text-3xl font-bold" style="color:#1ABC9C" data-countup="1" data-decimals="1" data-suffix="%" data-value="{{ "%.1f"|format(analytics.adherence_percentage) }}">0</div>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm dash-card--hover">
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Current Streak</div>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <div class="text-3xl font-bold text-gray-900" data-countup="1" data-value="{{ analytics.current_streak }}">0</div>
+                        <div class="text-sm text-gray-500">days</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                    <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">Daily Adherence</div>
+                            <div class="text-xs text-gray-600">Last 30 days performance</div>
+                        </div>
+                    </div>
+                    <div class="relative h-56 sm:h-60">
                         <canvas id="adherenceLine"></canvas>
                     </div>
                 </div>
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="text-sm font-semibold text-gray-900 mb-2">Taken vs missed (last 30 days)</div>
-                    <div class="relative h-56 sm:h-64">
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                    <div class="text-sm font-semibold text-gray-900 mb-3">Outcome Mix</div>
+                    <div class="relative h-56 sm:h-60">
                         <canvas id="takenPie"></canvas>
                     </div>
                 </div>
             </div>
+
             <div id="analytics-root" data-prescription-id="{{ prescription.id }}" class="hidden"></div>
         </div>
 
@@ -546,15 +586,25 @@
                     var labels = series.map(function(x) { return fmtDay(x.day); });
                     var pct = series.map(function(x) { return Math.round((x.percentage || 0) * 10) / 10; });
 
-                    new Chart(lineEl.getContext('2d'), {
+                    var ctx = lineEl.getContext('2d');
+                    var grad = null;
+                    try {
+                        grad = ctx.createLinearGradient(0, 0, 0, 240);
+                        grad.addColorStop(0, 'rgba(26,188,156,0.18)');
+                        grad.addColorStop(1, 'rgba(26,188,156,0.02)');
+                    } catch(e) {
+                        grad = 'rgba(26,188,156,0.10)';
+                    }
+
+                    new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: labels,
                             datasets: [{
                                 label: 'Adherence %',
                                 data: pct,
-                                borderColor: '#0F766E',
-                                backgroundColor: 'rgba(15,118,110,0.12)',
+                                borderColor: '#1ABC9C',
+                                backgroundColor: grad,
                                 fill: true,
                                 tension: 0.35,
                                 pointRadius: 2
@@ -564,11 +614,17 @@
                             responsive: true,
                             maintainAspectRatio: false,
                             scales: {
-                                y: { beginAtZero: true, max: 100 }
+                                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(229,231,235,0.9)' } },
+                                x: { grid: { display: false } }
                             },
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
+                                    backgroundColor: '#ffffff',
+                                    titleColor: '#111827',
+                                    bodyColor: '#111827',
+                                    borderColor: '#E5E7EB',
+                                    borderWidth: 1,
                                     callbacks: {
                                         label: function(ctx) { return (ctx.parsed.y || 0) + '%'; }
                                     }
@@ -772,6 +828,53 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
             requestAnimationFrame(function() {
                 el.style.width = v + '%';
             });
+        });
+    } catch (e) {
+        return;
+    }
+})();
+
+(function() {
+    try {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var nodes = document.querySelectorAll('[data-countup="1"]');
+        if (!nodes || !nodes.length) return;
+
+        function fmt(val, decimals) {
+            try {
+                return Number(val).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            } catch (e) {
+                return String(val);
+            }
+        }
+
+        nodes.forEach(function(el) {
+            var raw = el.getAttribute('data-value');
+            var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10) || 0;
+            var suffix = el.getAttribute('data-suffix') || '';
+            var target = parseFloat(raw || '0');
+            if (isNaN(target)) target = 0;
+
+            if (reduce) {
+                el.textContent = fmt(target, decimals) + suffix;
+                return;
+            }
+
+            var start = 0;
+            var duration = 900;
+            var t0 = null;
+
+            function step(ts) {
+                if (t0 === null) t0 = ts;
+                var p = (ts - t0) / duration;
+                if (p > 1) p = 1;
+                var eased = 1 - Math.pow(1 - p, 3);
+                var v = start + (target - start) * eased;
+                el.textContent = fmt(v, decimals) + suffix;
+                if (p < 1) requestAnimationFrame(step);
+            }
+
+            requestAnimationFrame(step);
         });
     } catch (e) {
         return;
@@ -1077,7 +1180,7 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
             if (!groups[g].length) return;
             html += '<div class="mb-3">' +
                 '<div class="text-xs font-semibold text-gray-700 mb-2">' + g + '</div>' +
-                '<div class="space-y-2">';
+                '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">';
             groups[g].forEach(function(it) {
                 var statusText = it.taken ? (it.late ? 'Taken (Late)' : 'Taken') : (it.missed ? 'Missed' : 'Pending');
                 var badgeBg = it.taken ? '#1ABC9C' : (it.missed ? '#FCA5A5' : '#D1F2EB');
@@ -1089,14 +1192,14 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
                 var disableBtn = (!allowToggle) || (!gate.ok);
                 var reason = (!allowToggle) ? 'You can only mark doses on their scheduled day.' : (gate.reason || '');
                 html += '' +
-                    '<div class="border border-gray-200 rounded-md p-3 flex items-start justify-between gap-3">' +
-                    '  <div>' +
+                    '<div class="rounded-[14px] border border-gray-200 bg-[#F9FBFB] p-4 flex flex-col justify-between gap-3 min-h-[110px]">' +
+                    '  <div class="min-w-0">' +
                     '    <div class="text-sm font-semibold text-gray-900">' + it.medicine_name + '</div>' +
-                    '    <div class="text-xs text-gray-600 mt-0.5">' + it.time + (meta ? (' • ' + meta) : '') + '</div>' +
-                    '    <div class="inline-block mt-2 px-2 py-0.5 rounded text-xs" style="background:' + badgeBg + ';color:' + badgeColor + '">' + statusText + '</div>' +
-                    (disableBtn && !it.taken ? ('    <div class="text-[11px] text-gray-500 mt-1">' + reason + '</div>') : '') +
+                    '    <div class="text-xs text-gray-600 mt-0.5">Scheduled: ' + it.time + (meta ? (' • ' + meta) : '') + '</div>' +
+                    '    <div class="inline-flex items-center mt-2 px-3 py-1 rounded-full text-xs font-semibold" style="background:' + badgeBg + ';color:' + badgeColor + '">' + statusText + '</div>' +
+                    (disableBtn && !it.taken ? ('    <div class="text-[11px] text-gray-500 mt-2">' + reason + '</div>') : '') +
                     '  </div>' +
-                    '  <button type="button" data-dose-id="' + it.dose_id + '" class="cal-toggle-btn px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50" ' + (disableBtn ? 'disabled' : '') + '>' + (it.taken ? 'Mark Pending' : 'Mark Taken') + '</button>' +
+                    '  <button type="button" data-dose-id="' + it.dose_id + '" class="cal-toggle-btn h-9 w-full sm:w-auto sm:self-end px-4 text-sm rounded-lg ' + (disableBtn ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-teal-600 text-white hover:bg-teal-700') + '" ' + (disableBtn ? 'disabled' : '') + '>' + (it.taken ? 'Mark Pending' : 'Mark Taken') + '</button>' +
                     '</div>';
             });
             html += '</div></div>';
@@ -1159,7 +1262,7 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
             if (!groups[g].length) return;
             html += '<div class="mb-3">' +
                 '<div class="text-xs font-semibold text-gray-700 mb-2">' + g + '</div>' +
-                '<div class="space-y-2">';
+                '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">';
 
             groups[g].forEach(function(it) {
                 var statusText = it.taken ? (it.late ? 'Taken (Late)' : 'Taken') : (it.missed ? 'Missed' : 'Upcoming');
@@ -1179,19 +1282,20 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
                 var reason = (!allowToggle) ? 'You can only mark doses on their scheduled day.' : (gate.reason || '');
 
                 html += '' +
-                    '<div class="border border-gray-200 rounded-md p-3 flex items-center justify-between gap-3">' +
-                    '  <div>' +
+                    '<div class="rounded-[14px] border border-gray-200 bg-[#F9FBFB] p-4 flex flex-col justify-between gap-3 min-h-[110px]">' +
+                    '  <div class="min-w-0">' +
                     '    <div class="text-sm font-semibold text-gray-900">' + it.medicine_name + '</div>' +
-                    '    <div class="text-xs text-gray-600">' + subText + '</div>' +
-                    '    <div class="inline-block mt-2 px-2 py-0.5 rounded text-xs" style="background:' + pillBg + ';color:' + pillColor + '">' + statusText + '</div>' +
-                    (disableBtn && !it.taken ? ('    <div class="text-[11px] text-gray-500 mt-1">' + reason + '</div>') : '') +
+                    '    <div class="text-xs text-gray-600 mt-0.5">' + subText + '</div>' +
+                    '    <div class="inline-flex items-center mt-2 px-3 py-1 rounded-full text-xs font-semibold" style="background:' + pillBg + ';color:' + pillColor + '">' + statusText + '</div>' +
+                    (disableBtn && !it.taken ? ('    <div class="text-[11px] text-gray-500 mt-2">' + reason + '</div>') : '') +
                     '  </div>' +
-                    '  <button type="button" data-dose-id="' + it.dose_id + '" class="cal-side-toggle px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50" ' + (disableBtn ? 'disabled' : '') + '>' + (it.taken ? 'Undo' : 'Mark Taken') + '</button>' +
+                    '  <button type="button" data-dose-id="' + it.dose_id + '" class="cal-side-toggle cal-toggle-btn h-9 w-full sm:w-auto sm:self-end px-4 text-sm rounded-lg ' + (disableBtn ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-teal-600 text-white hover:bg-teal-700') + '" ' + (disableBtn ? 'disabled' : '') + '>' + (it.taken ? 'Mark Pending' : 'Mark Taken') + '</button>' +
                     '</div>';
             });
 
             html += '</div></div>';
         });
+
         sideList.innerHTML = html;
 
         sideList.querySelectorAll('.cal-side-toggle').forEach(function(btn) {

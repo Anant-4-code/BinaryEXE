@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="relative" style="min-height:100vh;">
+    <div class="absolute inset-0" aria-hidden="true" style="background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(209,242,235,0.55) 40%, rgba(255,255,255,1) 100%);"></div>
+    <div class="absolute -top-20 -right-24 w-[560px] h-[560px] rounded-full" aria-hidden="true" style="background: radial-gradient(circle at 30% 30%, rgba(26,188,156,0.25), rgba(72,201,176,0.10) 42%, rgba(209,242,235,0) 70%); filter: blur(18px);"></div>
+
+    <div class="relative dash-shell" style="padding-top: 32px;">
+        <section class="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-10 items-center" style="min-height: calc(100vh - 64px);">
+            <div>
+                <div class="inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide" style="background:#D1F2EB;color:#1ABC9C;">
+                    AI-Powered Prescription Intelligence
+                </div>
+
+                <h1 class="mt-5 font-extrabold text-gray-900" style="font-size:56px; line-height:1.05; letter-spacing:-0.02em;">
+                    From Doctor Handwriting to
+                    <span style="background: linear-gradient(90deg, #1ABC9C, #48C9B0); -webkit-background-clip:text; background-clip:text; color: transparent;">Safe, Structured</span>
+                    Digital Care
+                </h1>
+
+                <p class="mt-5 text-lg text-gray-600" style="max-width: 44rem;">
+                    Automatically interpret handwritten prescriptions, generate structured medication plans, and track adherence with AI-driven safety validation.
+                </p>
+
+                <div class="mt-7 flex flex-col sm:flex-row gap-3">
+                    <a href="/dashboard" class="inline-flex items-center justify-center px-6 py-3 rounded-[14px] text-sm font-semibold" style="background:#1ABC9C;color:#fff; box-shadow: 0 18px 38px rgba(26,188,156,0.18);">
+                        Get Started
+                    </a>
+                    <a href="#showcase" class="inline-flex items-center justify-center px-6 py-3 rounded-[14px] text-sm font-semibold border" style="border-color:#1ABC9C;color:#1ABC9C; background: rgba(255,255,255,0.6);">
+                        See Product
+                    </a>
+                </div>
+
+                <div class="mt-10 text-sm text-gray-600">
+                    <span class="font-semibold" style="color:#1ABC9C;">400,000+</span>
+                    preventable medication errors occur annually due to unclear prescriptions.
+                </div>
+            </div>
+
+            <div class="relative">
+                <div class="absolute inset-0 rounded-[28px]" aria-hidden="true" style="background: radial-gradient(circle at 30% 20%, rgba(26,188,156,0.25), rgba(209,242,235,0) 60%);"></div>
+                <div class="relative bg-white rounded-[28px] border" style="border-color:#E5E7EB; box-shadow: 0 24px 64px rgba(15,23,42,0.10); overflow:hidden;">
+                    <div class="p-5 border-b" style="border-color:#E5E7EB;">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C; font-weight:800;">AI</div>
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">Prescription Workspace</div>
+                                    <div class="text-xs text-gray-500">OCR → Structured → Calendar → Analytics</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#D1F2EB;color:#1ABC9C;">Live</div>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="rounded-2xl border p-4" style="border-color:#E5E7EB; background:#F9FBFB;">
+                                <div class="text-xs text-gray-500 uppercase tracking-widest">Confidence</div>
+                                <div class="mt-2 text-3xl font-bold" style="color:#1ABC9C;">94%</div>
+                                <div class="mt-3 h-2 rounded-full" style="background:#E5E7EB;"></div>
+                                <div class="-mt-2 h-2 rounded-full" style="width:94%; background:#1ABC9C;"></div>
+                            </div>
+                            <div class="rounded-2xl border p-4" style="border-color:#E5E7EB; background:#F9FBFB;">
+                                <div class="text-xs text-gray-500 uppercase tracking-widest">Today</div>
+                                <div class="mt-2 text-3xl font-bold text-gray-900">8</div>
+                                <div class="text-xs text-gray-600 mt-1">Doses scheduled</div>
+                                <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold" style="background:#D1F2EB;color:#1ABC9C;">On Track</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 rounded-2xl border p-4" style="border-color:#E5E7EB; background:#FFFFFF;">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">Metformin</div>
+                                    <div class="text-xs text-gray-600">08:00 • After breakfast</div>
+                                </div>
+                                <div class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#D1F2EB;color:#1ABC9C;">Upcoming</div>
+                            </div>
+                            <div class="mt-3 h-9 rounded-xl" style="background:#1ABC9C; opacity:0.12;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16">
+            <div class="text-center">
+                <div class="text-3xl font-bold text-gray-900">Medication errors affect millions annually.</div>
+                <div class="mt-3 text-gray-600" style="max-width: 52rem; margin: 0 auto;">
+                    Illegible prescriptions lead to dosage mistakes, misuse, and safety risks. Sanjeevani AI helps clinicians and patients move from handwriting to safe digital medication workflows.
+                </div>
+            </div>
+
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="rounded-2xl border p-6 bg-white dash-card--hover" style="border-color:#E5E7EB;">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">🧾</div>
+                    <div class="mt-4 text-lg font-semibold text-gray-900">OCR Recognition</div>
+                    <div class="mt-2 text-sm text-gray-600">Capture prescriptions via upload or camera and extract text reliably.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white dash-card--hover" style="border-color:#E5E7EB;">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">🧠</div>
+                    <div class="mt-4 text-lg font-semibold text-gray-900">AI Validation</div>
+                    <div class="mt-2 text-sm text-gray-600">Structured medicine extraction with confidence scoring and safety checks.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white dash-card--hover" style="border-color:#E5E7EB;">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">📅</div>
+                    <div class="mt-4 text-lg font-semibold text-gray-900">Dose Tracking</div>
+                    <div class="mt-2 text-sm text-gray-600">Calendar schedule + adherence tracking to support real-world medication routines.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pb-16">
+            <div class="flex items-end justify-between flex-wrap gap-4">
+                <div>
+                    <div class="text-3xl font-bold text-gray-900">Built for intelligence</div>
+                    <div class="mt-2 text-gray-600">Everything you need to go from image to structured care in minutes.</div>
+                </div>
+            </div>
+
+            <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="rounded-2xl border p-6 bg-white shadow-sm" style="border-color:#E5E7EB;">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">✍️</div>
+                    <div class="mt-4 font-semibold text-gray-900">AI Handwriting Recognition</div>
+                    <div class="mt-2 text-sm text-gray-600">Interpret difficult handwriting with a confidence signal you can trust.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white shadow-sm" style="border-color:#E5E7EB;">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">🧩</div>
+                    <div class="mt-4 font-semibold text-gray-900">Structured Extraction</div>
+                    <div class="mt-2 text-sm text-gray-600">Dose, frequency, duration, instructions, age range—organized cleanly.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white shadow-sm" style="border-color:#E5E7EB;">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">🌐</div>
+                    <div class="mt-4 font-semibold text-gray-900">Multilingual Support</div>
+                    <div class="mt-2 text-sm text-gray-600">Transliteration for patient-friendly medicine instructions in native scripts.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white shadow-sm" style="border-color:#E5E7EB;">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">📆</div>
+                    <div class="mt-4 font-semibold text-gray-900">Smart Calendar Tracking</div>
+                    <div class="mt-2 text-sm text-gray-600">Generate schedules and track doses with real-time constraints.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white shadow-sm" style="border-color:#E5E7EB;">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">📊</div>
+                    <div class="mt-4 font-semibold text-gray-900">Analytics Dashboard</div>
+                    <div class="mt-2 text-sm text-gray-600">Adherence trends, outcomes mix, and actionable insights in a clean UI.</div>
+                </div>
+                <div class="rounded-2xl border p-6 bg-white shadow-sm" style="border-color:#E5E7EB;">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:#D1F2EB;color:#1ABC9C;">📄</div>
+                    <div class="mt-4 font-semibold text-gray-900">Export PDF</div>
+                    <div class="mt-2 text-sm text-gray-600">Generate a structured PDF report for records and sharing.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16" id="showcase" style="background:#0F1417; border-radius: 28px; overflow:hidden;">
+            <div class="relative">
+                <div class="absolute inset-0" aria-hidden="true" style="background: radial-gradient(circle at 70% 40%, rgba(26,188,156,0.30), rgba(15,20,23,0) 60%);"></div>
+                <div class="relative p-8 md:p-12 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+                    <div>
+                        <div class="text-xs font-semibold tracking-widest uppercase" style="color:#48C9B0;">Live Product Showcase</div>
+                        <div class="mt-3 text-3xl font-bold text-white">One workflow. Full clarity.</div>
+                        <div class="mt-3 text-sm" style="color: rgba(255,255,255,0.72);">
+                            Go from OCR to validated structured medicines, then track and analyze adherence—without clutter.
+                        </div>
+                        <div class="mt-6 space-y-2 text-sm" style="color: rgba(255,255,255,0.78);">
+                            <div>• OCR accuracy with confidence scoring</div>
+                            <div>• AI explanations and structured schedules</div>
+                            <div>• Real-time adherence tracking</div>
+                            <div>• Export structured PDF summaries</div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute -inset-6 rounded-[28px]" aria-hidden="true" style="background: radial-gradient(circle at 30% 30%, rgba(72,201,176,0.28), rgba(15,20,23,0) 70%); filter: blur(20px);"></div>
+                        <div class="relative rounded-[22px] border" style="border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+                            <div class="p-5">
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="rounded-xl p-3" style="background: rgba(255,255,255,0.06);">
+                                        <div class="text-[11px]" style="color: rgba(255,255,255,0.68);">Accuracy</div>
+                                        <div class="text-lg font-bold" style="color:#48C9B0;">98%</div>
+                                    </div>
+                                    <div class="rounded-xl p-3" style="background: rgba(255,255,255,0.06);">
+                                        <div class="text-[11px]" style="color: rgba(255,255,255,0.68);">Prescriptions</div>
+                                        <div class="text-lg font-bold" style="color:#ffffff;">5000+</div>
+                                    </div>
+                                    <div class="rounded-xl p-3" style="background: rgba(255,255,255,0.06);">
+                                        <div class="text-[11px]" style="color: rgba(255,255,255,0.68);">Adherence</div>
+                                        <div class="text-lg font-bold" style="color:#48C9B0;">85%</div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 rounded-2xl border p-4" style="border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.05);">
+                                    <div class="text-sm font-semibold" style="color:#ffffff;">Comprehensive Control</div>
+                                    <div class="text-xs mt-1" style="color: rgba(255,255,255,0.68);">A clean workspace to review medicines, schedules, and outcomes.</div>
+                                    <div class="mt-4 h-10 rounded-xl" style="background: rgba(26,188,156,0.12);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16">
+            <div class="rounded-[24px] p-8 md:p-10" style="background:#D1F2EB;">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="rounded-2xl bg-white/70 border p-6" style="border-color:#E5E7EB;">
+                        <div class="text-sm font-semibold text-gray-900">Encrypted Data</div>
+                        <div class="text-sm text-gray-600 mt-2">Sensitive health data is handled with care and secure storage practices.</div>
+                    </div>
+                    <div class="rounded-2xl bg-white/70 border p-6" style="border-color:#E5E7EB;">
+                        <div class="text-sm font-semibold text-gray-900">Human Verification Layer</div>
+                        <div class="text-sm text-gray-600 mt-2">Confidence alerts help clinicians review uncertain extractions.</div>
+                    </div>
+                    <div class="rounded-2xl bg-white/70 border p-6" style="border-color:#E5E7EB;">
+                        <div class="text-sm font-semibold text-gray-900">Not Used for Model Training</div>
+                        <div class="text-sm text-gray-600 mt-2">Your uploaded prescriptions remain yours and are not repurposed.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pb-16">
+            <div class="rounded-[24px] p-10 text-center" style="background:#1ABC9C; box-shadow: 0 22px 60px rgba(26,188,156,0.22);">
+                <div class="text-3xl font-bold text-white">Ready to Transform Prescription Safety?</div>
+                <div class="mt-3 text-sm" style="color: rgba(255,255,255,0.86);">Start with your first prescription in under a minute.</div>
+                <div class="mt-7 flex flex-col sm:flex-row justify-center gap-3">
+                    <a href="/dashboard" class="inline-flex items-center justify-center px-7 py-3 rounded-[14px] text-sm font-semibold" style="background:#ffffff;color:#0F766E;">
+                        Get Started
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <footer class="py-10 text-sm text-gray-600">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <div class="font-semibold text-gray-900">Sanjeevani AI</div>
+                    <div class="text-xs text-gray-500 mt-1">AI-assisted prescription intelligence for safer medication workflows.</div>
+                </div>
+                <div class="flex items-center gap-6 text-xs text-gray-500">
+                    <div>Privacy</div>
+                    <div>Terms</div>
+                    <div>Contact</div>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<style>
+@media (max-width: 1024px){
+    h1[style*="font-size:56px"]{ font-size: 42px !important; }
+}
+@media (max-width: 640px){
+    h1[style*="font-size:56px"]{ font-size: 32px !important; }
+}
+</style>
+{% endblock %}

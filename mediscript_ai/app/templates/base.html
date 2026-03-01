@@ -9,9 +9,10 @@
 <body class="bg-gray-50 text-gray-900">
 <div id="cursor-glow-bg" class="cursor-glow-bg" aria-hidden="true"></div>
 <div class="min-h-screen">
+    {% if not hide_header %}
     <header class="dash-header">
         <div class="dash-header__inner">
-            <a href="/" class="dash-header__back" aria-label="Back to Dashboard">
+            <a href="/dashboard" class="dash-header__back" aria-label="Back to Dashboard">
                 <svg class="dash-header__back-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
@@ -27,6 +28,7 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     <div id="global-loader" class="fixed inset-0 hidden items-center justify-center" style="background: rgba(2,6,23,0.35); z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div class="global-glass-card rounded-2xl shadow-lg px-6 py-5 flex items-center gap-4">

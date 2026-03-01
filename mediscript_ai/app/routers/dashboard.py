@@ -30,6 +30,18 @@ def _patient_info(prescription: Prescription) -> tuple:
 
 
 @router.get("/", response_class=HTMLResponse)
+def landing(request: Request) -> Any:
+    return templates.TemplateResponse(
+        "landing.html",
+        {
+            "request": request,
+            "hide_header": True,
+            "title": "Sanjeevani AI",
+        },
+    )
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
 def home(request: Request, db: Session = Depends(get_db)) -> Any:
     prescriptions: List[Prescription] = (
         db.query(Prescription).order_by(Prescription.created_at.desc()).limit(20).all()

@@ -77,7 +77,7 @@ async def update_prescription_meta(
     caption = (form.get("caption") or "").strip()
     prescription.caption = caption if caption else None
     db.commit()
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 
 def _delete_prescription_core(db: Session, prescription_id: int) -> None:
@@ -122,5 +122,5 @@ async def delete_prescription_form(
     After deletion, redirect back to the dashboard.
     """
     _delete_prescription_core(db, prescription_id)
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/dashboard", status_code=303)
 
