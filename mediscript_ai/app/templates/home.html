@@ -1,76 +1,99 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">Your Prescriptions</h1>
-        <p class="text-sm text-gray-500">One prescription = one notebook workspace.</p>
+<div class="dash-shell">
+    <div class="mb-8" style="margin-bottom:32px;">
+        <h1 class="dash-title">Your Prescriptions</h1>
+        <div class="dash-accent-line"></div>
+        <p class="dash-subtitle">One prescription = one notebook workspace</p>
     </div>
-</div>
 
-<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-    <h2 class="font-semibold mb-3">Upload new prescription</h2>
-    <form action="/upload/" method="post" enctype="multipart/form-data" class="space-y-3">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-                <label class="block text-xs text-gray-600 mb-1">Title</label>
-                <input type="text" name="title" value="Prescription" placeholder="e.g. Dr. Sharma - Feb 2025" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-600 mb-1">Caption (optional)</label>
-                <input type="text" name="caption" placeholder="Short note" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-            </div>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-            <input id="uploadFile" type="file" name="file" accept="image/*" capture="environment" class="text-sm" required>
-            <button id="openCameraBtn" type="button" class="px-3 py-2 bg-gray-100 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-200">
-                Use Camera
-            </button>
-            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium">
-                Upload Prescription
-            </button>
-        </div>
-
-        <div id="uploadPreviewWrap" class="hidden">
-            <p class="text-xs text-gray-500 mb-2">Preview</p>
-            <img id="uploadPreviewImg" class="h-28 w-auto rounded-md border border-gray-200 object-contain bg-gray-50" alt="Selected image preview">
-        </div>
-
-        <div id="cameraWrap" class="hidden">
-            <p class="text-xs text-gray-500 mb-2">Camera preview</p>
-            <video id="cameraVideo" class="w-full max-w-md rounded-md border border-gray-200 bg-black" autoplay playsinline></video>
-            <canvas id="cameraCanvas" class="hidden"></canvas>
-            <div class="flex gap-2 mt-2 flex-wrap">
-                <button id="captureBtn" type="button" class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">Capture</button>
-                <button id="closeCameraBtn" type="button" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300">Close</button>
-                <p id="cameraError" class="text-xs text-red-600"></p>
-            </div>
-        </div>
-    </form>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    {% for p in prescriptions %}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition">
-            <a href="/workspace/{{ p.id }}" class="block mb-2">
-                <div class="flex items-center justify-between mb-1">
-                    <h2 class="font-semibold truncate">{{ p.title }}</h2>
-                    <span class="text-xs px-2 py-1 rounded-full shrink-0
-                        {% if p.status == 'active' %}bg-green-100 text-green-700
-                        {% elif p.status == 'completed' %}bg-gray-100 text-gray-700
-                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                        {{ p.status | capitalize }}
-                    </span>
+    <div class="dash-card p-7 mb-8" style="padding:28px; margin-bottom:32px;">
+        <h2 class="text-lg font-semibold" style="font-size:18px;">Upload new prescription</h2>
+        <form action="/upload/" method="post" enctype="multipart/form-data" class="mt-4" style="margin-top:16px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" style="gap:16px;">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1" style="letter-spacing:0.08em; text-transform:uppercase;">Prescription title</label>
+                    <input type="text" name="title" value="Prescription" placeholder="e.g. Monthly Checkup - June 2024" class="dash-input">
                 </div>
-                {% if p.patient_name %}<p class="text-xs text-gray-600">Patient: {{ p.patient_name }}</p>{% endif %}
-                {% if p.disease_name %}<p class="text-xs text-gray-600">Disease: {{ p.disease_name }}</p>{% endif %}
-                <p class="text-xs text-gray-500 mt-1">Created: {{ p.created_at.strftime("%d %b %Y, %H:%M") }}</p>
-                <p class="text-xs text-gray-400">Confidence: {{ "%.1f"|format(p.confidence_score) }}%</p>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1" style="letter-spacing:0.08em; text-transform:uppercase;">Caption / notes</label>
+                    <input type="text" name="caption" placeholder="Add a short description..." class="dash-input">
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center justify-between gap-4 flex-wrap" style="margin-top:20px;">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <label class="dash-btn dash-btn--file" for="uploadFile">Choose file</label>
+                    <input id="uploadFile" type="file" name="file" accept="image/*" capture="environment" class="hidden" required>
+                    <button id="openCameraBtn" type="button" class="dash-btn dash-btn--outline">Use Camera</button>
+                </div>
+                <button type="submit" class="dash-btn dash-btn--primary">Upload Prescription</button>
+            </div>
+
+            <div id="uploadPreviewWrap" class="hidden mt-4">
+                <p class="text-xs text-gray-500 mb-2">Preview</p>
+                <img id="uploadPreviewImg" class="h-28 w-auto rounded-md border border-gray-200 object-contain bg-gray-50" alt="Selected image preview">
+            </div>
+
+            <div id="cameraWrap" class="hidden mt-4">
+                <p class="text-xs text-gray-500 mb-2">Camera preview</p>
+                <video id="cameraVideo" class="w-full max-w-md rounded-md border border-gray-200 bg-black" autoplay playsinline></video>
+                <canvas id="cameraCanvas" class="hidden"></canvas>
+                <div class="flex gap-2 mt-2 flex-wrap">
+                    <button id="captureBtn" type="button" class="dash-btn dash-btn--primary">Capture</button>
+                    <button id="closeCameraBtn" type="button" class="dash-btn dash-btn--file">Close</button>
+                    <p id="cameraError" class="text-xs text-red-600"></p>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" style="gap:24px;">
+    {% for p in prescriptions %}
+        <div class="dash-card dash-card--tight dash-card--hover">
+            <a href="/workspace/{{ p.id }}" class="block">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 class="font-semibold truncate">{{ p.title }}</h2>
+                        <p class="text-xs text-gray-500 mt-1">Updated {{ p.created_at.strftime("%d %b %Y, %H:%M") }}</p>
+                    </div>
+                    {% if p.status == 'active' %}
+                        <span class="dash-badge dash-badge--active">Active</span>
+                    {% else %}
+                        <span class="dash-badge dash-badge--review">Needs Review</span>
+                    {% endif %}
+                </div>
+
+                {% if p.patient_name or p.disease_name %}
+                <div class="text-xs text-gray-600 mt-3">
+                    {% if p.patient_name %}<div>Patient: {{ p.patient_name }}</div>{% endif %}
+                    {% if p.disease_name %}<div>Disease: {{ p.disease_name }}</div>{% endif %}
+                </div>
+                {% endif %}
+
+                <div class="mt-4">
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+                        <span>AI Confidence</span>
+                        <span class="font-semibold" style="color:#111827;">{{ "%.1f"|format(p.confidence_score) }}%</span>
+                    </div>
+                    <div class="dash-conf-track">
+                        {% set c = (p.confidence_score or 0) %}
+                        {% if c < 60 %}
+                            <div class="dash-conf-fill dash-conf-fill--warn" data-conf="{{ c }}"></div>
+                        {% elif c > 85 %}
+                            <div class="dash-conf-fill dash-conf-fill--strong" data-conf="{{ c }}"></div>
+                        {% else %}
+                            <div class="dash-conf-fill" data-conf="{{ c }}"></div>
+                        {% endif %}
+                    </div>
+                </div>
             </a>
-            <div class="flex gap-2 mt-3">
-                <button type="button" class="rename-btn flex-1 px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium hover:bg-gray-200 transition" data-id="{{ p.id }}" data-title="{{ p.title }}" data-caption="{{ p.caption or '' }}">
+
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2" style="gap:10px;">
+                <button type="button" class="rename-btn dash-btn dash-btn-sm dash-btn--rename w-full" data-id="{{ p.id }}" data-title="{{ p.title }}" data-caption="{{ p.caption or '' }}">
                     Rename / Caption
                 </button>
-                <button type="button" onclick="deletePrescription({{ p.id }}, '{{ p.title | e }}')" class="flex-1 px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200 transition">
+                <button type="button" class="delete-btn dash-btn dash-btn-sm dash-btn--danger w-full" data-id="{{ p.id }}" data-title="{{ p.title }}">
                     Delete
                 </button>
             </div>
@@ -152,6 +175,23 @@ uploadFile.addEventListener('change', function() {
     showSelectedFilePreview(file);
 });
 
+function animateConfidenceBars() {
+    try {
+        document.querySelectorAll('.dash-conf-fill[data-conf]').forEach(function(el) {
+            var v = parseFloat(el.getAttribute('data-conf') || '0');
+            if (isNaN(v)) v = 0;
+            v = Math.max(0, Math.min(100, v));
+            requestAnimationFrame(function() {
+                el.style.width = v + '%';
+            });
+        });
+    } catch (e) {
+        return;
+    }
+}
+
+animateConfidenceBars();
+
 async function openCamera() {
     cameraError.textContent = '';
     cameraWrap.classList.remove('hidden');
@@ -211,6 +251,15 @@ document.querySelectorAll('.rename-btn').forEach(function(btn) {
         document.getElementById('renameTitle').value = this.getAttribute('data-title') || '';
         document.getElementById('renameCaption').value = this.getAttribute('data-caption') || '';
         document.getElementById('renameModal').classList.remove('hidden');
+    });
+});
+
+document.querySelectorAll('.delete-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = parseInt(this.getAttribute('data-id') || '0', 10);
+        var title = this.getAttribute('data-title') || '';
+        if (!id) return;
+        deletePrescription(id, title);
     });
 });
 

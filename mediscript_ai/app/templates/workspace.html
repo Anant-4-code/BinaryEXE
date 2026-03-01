@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="mb-4">
-    <div class="flex items-center justify-between mb-4">
-        <div class="flex-1">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+        <div class="flex-1 min-w-0">
             <div class="flex items-center space-x-2">
                 <a href="/" class="text-xs text-gray-500 hover:text-gray-700">&larr; Back to Dashboard</a>
                 <span class="text-xs text-gray-400">/</span>
@@ -27,16 +27,29 @@
                 </form>
             </div>
         </div>
-        <div class="flex items-center space-x-4">
-            <span class="text-xs px-2 py-1 rounded-full
+        <div class="flex flex-col items-start md:items-end gap-2">
+            <span class="text-xs px-3 py-1 rounded-full
                 {% if prescription.status == 'active' %}bg-green-100 text-green-700
                 {% elif prescription.status == 'completed' %}bg-gray-100 text-gray-700
                 {% else %}bg-yellow-100 text-yellow-700{% endif %}">
                 {{ prescription.status | replace("_", " ") | capitalize }}
             </span>
-            <div class="text-xs">
-                <span class="font-semibold">Confidence:</span>
-                <span>{{ "%.1f"|format(prescription.confidence_score) }}%</span>
+            <div class="w-full md:w-56">
+                <div class="flex items-center justify-between text-xs text-gray-600">
+                    <span class="font-semibold">Confidence</span>
+                    <span class="text-gray-900">{{ "%.1f"|format(prescription.confidence_score) }}%</span>
+                </div>
+                <div class="mt-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    {% set conf = (prescription.confidence_score or 0) %}
+                    {% if conf < 60 %}
+                        {% set conf_color = "#F59E0B" %}
+                    {% elif conf > 85 %}
+                        {% set conf_color = "#0F766E" %}
+                    {% else %}
+                        {% set conf_color = "#1ABC9C" %}
+                    {% endif %}
+                    <div class="h-full rounded-full" data-conf-bar="1" data-conf="{{ conf }}" data-conf-color="{{ conf_color }}" style="width:0"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -54,8 +67,8 @@
         {{ error }}
     </div>
     {% endif %}
-    <div class="border-b border-gray-200 mb-4">
-        <nav class="-mb-px flex space-x-8">
+    <div class="mb-4">
+        <nav class="flex gap-3 overflow-x-auto pb-2" style="-webkit-overflow-scrolling:touch;">
             {% set tabs = [
                 ('overview', 'Overview'),
                 ('calendar', 'Calendar'),
@@ -65,11 +78,11 @@
             {% for value, label in tabs %}
                 {% set active = (tab == value) %}
                 <a href="?tab={{ value }}"
-                   class="whitespace-nowrap py-3 px-4 border-b-2 text-sm font-medium
+                   class="whitespace-nowrap text-sm font-medium px-4 py-2 rounded-full border
                    {% if active %}
-                       border-green-500 text-green-600 bg-white
+                       bg-teal-50 border-teal-100 text-teal-700
                    {% else %}
-                       border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                       bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100
                    {% endif %}">
                     {{ label }}
                 </a>
@@ -78,10 +91,10 @@
     </div>
 
     {% if tab == 'overview' %}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="lg:col-span-2 space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 lg:gap-8">
+            <div class="space-y-6">
                 {% if image_url %}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <div class="flex items-center justify-between mb-2">
                         <h2 class="font-semibold text-sm">Uploaded Image Preview</h2>
                         <a href="{{ image_url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800">Open</a>
@@ -89,7 +102,7 @@
                     <img src="{{ image_url }}" alt="Uploaded prescription image" class="w-full max-h-56 object-contain rounded-md border border-gray-200 bg-gray-50">
                 </div>
                 {% endif %}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <h2 class="font-semibold mb-3">Extracted Text (OCR)</h2>
                     {% if prescription.raw_text %}
                         <pre class="text-sm bg-gray-50 border border-gray-200 rounded-md p-3 whitespace-pre-wrap">
@@ -102,7 +115,7 @@
                     {% endif %}
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="font-semibold">Structured Prescription (AI)</h2>
                         <form action="/workspace/{{ prescription.id }}/refresh-all" method="post">
@@ -113,13 +126,13 @@
                     </div>
                     <p class="text-xs text-gray-500 mb-3">Extract from OCR or edit each medicine below. Click &quot;Edit&quot; on a card to change name, dose, frequency, duration, instructions, and age range.</p>
                     {% if prescription.medicines %}
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 gap-4">
                             <div class="space-y-3">
                                 {% for m in prescription.medicines %}
-                                    <div class="medicine-card border border-gray-200 rounded-md p-3
-                                        {% if m.confidence is defined and m.confidence < 60 %}bg-amber-50 border-amber-200{% endif %}">
+                                    <div class="medicine-card border rounded-lg p-4 hover:shadow-md transition {% if m.confidence is defined and m.confidence < 60 %}bg-amber-50 border-amber-200{% else %}border-gray-200{% endif %}"
+                                         style="border-left:4px solid #1ABC9C;">
                                         <div class="medicine-view">
-                                            <div class="flex items-center justify-between mb-1">
+                                            <div class="flex items-center justify-between mb-2">
                                                 <div>
                                                     <p class="font-semibold">{{ m.normalized_name or m.original_name }}</p>
                                                     {% if m.original_name and m.original_name != (m.normalized_name or '') %}
@@ -141,17 +154,29 @@
                                             {% if m.confidence is defined and m.confidence < 60 %}
                                             <p class="text-xs text-amber-700 mt-1 bg-amber-100/50 rounded px-2 py-1">⚠️ Low confidence — verify before use.</p>
                                             {% endif %}
-                                            <p class="text-xs text-gray-600">
-                                                Dose: {{ m.dose or '—' }} |
-                                                Frequency: {{ m.frequency | format_frequency }} |
-                                                Duration: {{ m.duration_days or '—' }} days
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs text-gray-700">
+                                                <div class="rounded-md border border-gray-100 bg-gray-50/50 p-2">
+                                                    <div class="text-[11px] text-gray-500">Dose</div>
+                                                    <div class="font-semibold text-gray-900">{{ m.dose or '—' }}</div>
+                                                </div>
+                                                <div class="rounded-md border border-gray-100 bg-gray-50/50 p-2">
+                                                    <div class="text-[11px] text-gray-500">Frequency</div>
+                                                    <div class="font-semibold text-gray-900">{{ m.frequency | format_frequency }}</div>
+                                                </div>
+                                                <div class="rounded-md border border-gray-100 bg-gray-50/50 p-2">
+                                                    <div class="text-[11px] text-gray-500">Duration</div>
+                                                    <div class="font-semibold text-gray-900">{{ m.duration_days or '—' }} days</div>
+                                                </div>
                                                 {% if m.age_range %}
-                                                | Age range: {{ m.age_range }}
+                                                <div class="rounded-md border border-gray-100 bg-gray-50/50 p-2 sm:col-span-2 lg:col-span-3">
+                                                    <div class="text-[11px] text-gray-500">Age range</div>
+                                                    <div class="font-semibold text-gray-900">{{ m.age_range }}</div>
+                                                </div>
                                                 {% endif %}
-                                            </p>
-                                            <p class="text-xs text-gray-500 mt-1">
+                                            </div>
+                                            <div class="text-xs text-gray-600 mt-3">
                                                 {{ m.instructions or 'No instructions provided.' }}
-                                            </p>
+                                            </div>
                                             {% if not m.explanation %}
                                             <form action="/workspace/{{ prescription.id }}/medicine/{{ m.id }}/explain" method="post" class="mt-2">
                                                 <button type="submit" class="text-xs text-blue-600 hover:text-blue-800">Explain this medicine</button>
@@ -209,10 +234,10 @@
                     {% endif %}
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <h2 class="font-semibold mb-3">Transliteration of the Structured Prescription (AI)</h2>
                     <p class="text-xs text-gray-500 mb-3">Translate the full prescription into another language with proper native script (Devanagari, Telugu, Tamil, etc.). One language at a time. Uses Google Translate for accurate output.</p>
-                    <form action="/workspace/{{ prescription.id }}/transliterate" method="post" class="flex flex-wrap items-center gap-2">
+                    <form action="/workspace/{{ prescription.id }}/transliterate" method="post" class="flex flex-col sm:flex-row sm:items-center gap-2">
                         <select name="language" required class="text-sm border border-gray-300 rounded-md px-3 py-1.5">
                             {% for value, label in transliteration_languages %}
                             <option value="{{ value }}" {% if transliterated and transliterated.language == value %}selected{% endif %}>{{ label }}</option>
@@ -230,8 +255,8 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="space-y-4">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                         <h2 class="font-semibold">Patient &amp; Doctor Details</h2>
                         <div class="flex items-center gap-2">
@@ -330,7 +355,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <h2 class="font-semibold mb-2">Next Steps</h2>
                     <p class="text-sm text-gray-600">
                         This workspace shows both the raw OCR text from your prescription image and an AI-generated,
@@ -339,7 +364,7 @@
                     </p>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                     <h3 class="font-semibold mb-2">Actions</h3>
                     <form action="/workspace/{{ prescription.id }}/confirm" method="post" class="space-y-2">
                         <div>
@@ -347,13 +372,13 @@
                             <input type="date" name="start_date" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
                         </div>
                         <button type="submit"
-                                class="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md">
+                                class="w-full px-4 py-3 bg-teal-600 text-white text-sm font-medium rounded-lg">
                             Confirm &amp; Activate Schedule
                         </button>
                     </form>
                     <form action="/upload/{{ prescription.id }}/delete" method="post" class="mt-3">
                         <button type="submit"
-                                class="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md"
+                                class="w-full px-4 py-3 bg-red-600 text-white text-sm font-medium rounded-lg"
                                 onclick="return confirm('Are you sure you want to delete this prescription? This cannot be undone.');">
                             Delete Prescription
                         </button>
@@ -696,6 +721,26 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
         card.querySelector('.medicine-edit').classList.add('hidden');
     });
 });
+
+(function() {
+    try {
+        var bars = document.querySelectorAll('[data-conf-bar="1"]');
+        if (!bars || !bars.length) return;
+        bars.forEach(function(el) {
+            var v = parseFloat(el.getAttribute('data-conf') || '0');
+            if (isNaN(v)) v = 0;
+            v = Math.max(0, Math.min(100, v));
+            var color = el.getAttribute('data-conf-color') || '#1ABC9C';
+            el.style.background = color;
+            el.style.transition = 'width 900ms cubic-bezier(.22,1.0,.36,1)';
+            requestAnimationFrame(function() {
+                el.style.width = v + '%';
+            });
+        });
+    } catch (e) {
+        return;
+    }
+})();
 
 // Calendar UI
 (function() {
