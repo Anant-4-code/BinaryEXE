@@ -58,7 +58,7 @@ def _image_to_jpeg_bytes(image_path: Path) -> bytes:
 def run_handwriting_model(image_path: Path) -> OCRResult:
     """
     Image -> raw text using Pen-to-Print RapidAPI.
-    Falls back to a simple dummy text if the call fails.
+    Falls back to local pytesseract, then to dummy text.
     Converts AVIF/WebP etc. to JPEG for API compatibility.
     """
     try:
@@ -73,7 +73,9 @@ def run_handwriting_model(image_path: Path) -> OCRResult:
     raw_text = ""
     reliability = 0.5
 
-    if settings.handwriting_rapidapi_key:
+    ocr_engine = (settings.ocr_engine or "auto").strip().lower()
+
+    if ocr_engine in {"auto", "rapidapi"} and settings.handwriting_rapidapi_key:
         try:
             result = _call_handwriting_api(image_bytes)
             data = json.loads(result)
@@ -83,8 +85,29 @@ def run_handwriting_model(image_path: Path) -> OCRResult:
         except Exception:
             raw_text = ""
 
-    if not raw_text:
+    if not raw_text and ocr_engine in {"auto", "tesseract"}:
+        try:
+            import pytesseract
+
+            if settings.tesseract_cmd:
+                pytesseract.pytesseract.tesseract_cmd = settings.tesseract_cmd
+
+            img = Image.open(image_path)
+            raw_text = (pytesseract.image_to_string(img) or "").strip()
+            if raw_text:
+                reliability = 0.8
+        except Exception:
+            raw_text = ""
+
+    if not raw_text and ocr_engine in {"auto", "dummy"}:
         raw_text = "Tab Amox 500mg three times daily x 5 days\nSyp PCM 10ml twice daily"
+        reliability = 0.1
+
+    if not raw_text:
+        raise RuntimeError(
+            "OCR is not working. Configure either RapidAPI (HANDWRITING_RAPIDAPI_KEY) "
+            "or local Tesseract (install Tesseract + pip install pytesseract, and optionally set TESSERACT_CMD)."
+        )
 
     return OCRResult(raw_text=raw_text, ocr_reliability=reliability)
 

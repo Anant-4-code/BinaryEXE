@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from app.config import get_settings
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 settings = get_settings()
 
 
@@ -16,7 +16,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(password, scheme="pbkdf2_sha256")
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
