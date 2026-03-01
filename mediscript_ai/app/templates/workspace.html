@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="mb-4">
+<div class="dash-shell">
     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
         <div class="flex-1 min-w-0">
             <div class="flex items-center space-x-2">
@@ -61,13 +61,13 @@
     </div>
     {% endif %}
 
-    <div class="max-w-7xl mx-auto">
+    <div>
     {% if error %}
     <div class="mb-4 p-3 rounded-md border border-red-200 bg-red-50 text-red-800 text-sm">
         {{ error }}
     </div>
     {% endif %}
-    <div class="mb-4">
+    <div class="mb-3">
         <nav class="flex gap-3 overflow-x-auto pb-2" style="-webkit-overflow-scrolling:touch;">
             {% set tabs = [
                 ('overview', 'Overview'),
@@ -91,18 +91,33 @@
     </div>
 
     {% if tab == 'overview' %}
-        <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 lg:gap-8">
-            <div class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 lg:gap-6">
+            <div class="space-y-4">
                 {% if image_url %}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="font-semibold text-sm">Uploaded Image Preview</h2>
-                        <a href="{{ image_url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800">Open</a>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="font-semibold text-sm">Uploaded Image Preview</h2>
+                            <a href="{{ image_url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800">Open</a>
+                        </div>
+                        <img src="{{ image_url }}" alt="Uploaded prescription image" class="w-full max-h-52 object-contain rounded-md border border-gray-200 bg-gray-50">
                     </div>
-                    <img src="{{ image_url }}" alt="Uploaded prescription image" class="w-full max-h-56 object-contain rounded-md border border-gray-200 bg-gray-50">
+
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
+                        <h2 class="font-semibold mb-3">Extracted Text (OCR)</h2>
+                        {% if prescription.raw_text %}
+                            <pre class="text-sm bg-gray-50 border border-gray-200 rounded-md p-3 whitespace-pre-wrap max-h-52 overflow-auto">
+{{ prescription.raw_text }}
+                            </pre>
+                        {% else %}
+                            <p class="text-sm text-gray-500">
+                                No OCR text available yet. Upload a prescription image from the dashboard to populate this view.
+                            </p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endif %}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                {% else %}
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                     <h2 class="font-semibold mb-3">Extracted Text (OCR)</h2>
                     {% if prescription.raw_text %}
                         <pre class="text-sm bg-gray-50 border border-gray-200 rounded-md p-3 whitespace-pre-wrap">
@@ -114,8 +129,9 @@
                         </p>
                     {% endif %}
                 </div>
+                {% endif %}
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="font-semibold">Structured Prescription (AI)</h2>
                         <form action="/workspace/{{ prescription.id }}/refresh-all" method="post">
@@ -126,14 +142,14 @@
                     </div>
                     <p class="text-xs text-gray-500 mb-3">Extract from OCR or edit each medicine below. Click &quot;Edit&quot; on a card to change name, dose, frequency, duration, instructions, and age range.</p>
                     {% if prescription.medicines %}
-                        <div class="grid grid-cols-1 gap-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
                             <div class="space-y-3">
                                 {% for m in prescription.medicines %}
                                     <div class="medicine-card border rounded-lg p-4 hover:shadow-md transition {% if m.confidence is defined and m.confidence < 60 %}bg-amber-50 border-amber-200{% else %}border-gray-200{% endif %}"
                                          style="border-left:4px solid #1ABC9C;">
                                         <div class="medicine-view">
                                             <div class="flex items-center justify-between mb-2">
-                                                <div>
+                                                <div class="min-w-0 pr-2">
                                                     <p class="font-semibold">{{ m.normalized_name or m.original_name }}</p>
                                                     {% if m.original_name and m.original_name != (m.normalized_name or '') %}
                                                         <p class="text-xs text-gray-500">{{ m.original_name }}</p>
@@ -205,11 +221,13 @@
                                 {% endfor %}
                             </div>
                             <div class="space-y-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h3 class="font-semibold text-sm">Medicine Explanations</h3>
-                                    <p class="text-xs text-gray-500 mb-1">Brief explanation with medicine name and age range (max 500 characters).</p>
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <h3 class="font-semibold text-sm">Medicine Explanations</h3>
+                                        <p class="text-xs text-gray-500 mt-0.5">Brief explanation with medicine name and age range (max 500 characters).</p>
+                                    </div>
                                     {% if prescription.medicines %}
-                                    <form action="/workspace/{{ prescription.id }}/explain-all-medicines" method="post">
+                                    <form action="/workspace/{{ prescription.id }}/explain-all-medicines" method="post" class="shrink-0">
                                         <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md">Generate All</button>
                                     </form>
                                     {% endif %}
@@ -234,7 +252,7 @@
                     {% endif %}
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                     <h2 class="font-semibold mb-3">Transliteration of the Structured Prescription (AI)</h2>
                     <p class="text-xs text-gray-500 mb-3">Translate the full prescription into another language with proper native script (Devanagari, Telugu, Tamil, etc.). One language at a time. Uses Google Translate for accurate output.</p>
                     <form action="/workspace/{{ prescription.id }}/transliterate" method="post" class="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -248,15 +266,15 @@
                     {% if transliterated and transliterated.full %}
                     <div class="mt-4 border border-indigo-100 rounded-md p-3 bg-indigo-50/30">
                         <p class="text-xs font-semibold text-indigo-700 uppercase mb-2">Current: {{ transliterated.label }}</p>
-                        <pre class="text-sm text-gray-800 whitespace-pre-wrap" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Bengali', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Malayalam', 'Noto Sans Gurmukhi', sans-serif;">{{ transliterated.full }}</pre>
+                        <pre class="text-sm text-gray-800 whitespace-pre-wrap max-h-52 overflow-auto" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Bengali', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Malayalam', 'Noto Sans Gurmukhi', sans-serif;">{{ transliterated.full }}</pre>
                     </div>
                     {% else %}
                     <p class="text-sm text-gray-500 mt-3">No transliteration yet. Select a language and click "Transliterate". Run AI Extraction and Patient/Doctor extraction first.</p>
                     {% endif %}
                 </div>
             </div>
-            <div class="space-y-6">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5 md:col-span-2 lg:col-span-1">
                     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                         <h2 class="font-semibold">Patient &amp; Doctor Details</h2>
                         <div class="flex items-center gap-2">
@@ -355,7 +373,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                     <h2 class="font-semibold mb-2">Next Steps</h2>
                     <p class="text-sm text-gray-600">
                         This workspace shows both the raw OCR text from your prescription image and an AI-generated,
@@ -364,7 +382,7 @@
                     </p>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                     <h3 class="font-semibold mb-2">Actions</h3>
                     <form action="/workspace/{{ prescription.id }}/confirm" method="post" class="space-y-2">
                         <div>
@@ -387,77 +405,77 @@
             </div>
         </div>
     {% elif tab == 'calendar' %}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                    <div>
-                        <h2 class="font-semibold">Medication Schedule</h2>
-                        <p class="text-sm text-gray-600">Track your daily intake and stay consistent.</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="cal-prev" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Prev</button>
-                        <button type="button" id="cal-today" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Today</button>
-                        <button type="button" id="cal-next" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Next</button>
-                        <div class="ml-2 text-sm font-semibold text-gray-800" id="cal-title"></div>
-                    </div>
-                </div>
-
-                <div class="rounded-xl border border-gray-200 bg-gray-50/30 p-2 sm:p-3">
-                    <div class="grid grid-cols-7 gap-1 sm:gap-2 text-[11px] sm:text-xs text-gray-600 mb-2">
-                        <div class="text-center">Sun</div>
-                        <div class="text-center">Mon</div>
-                        <div class="text-center">Tue</div>
-                        <div class="text-center">Wed</div>
-                        <div class="text-center">Thu</div>
-                        <div class="text-center">Fri</div>
-                        <div class="text-center">Sat</div>
-                    </div>
-                    <div class="grid grid-cols-7 gap-1 sm:gap-2" id="cal-grid"></div>
-                </div>
-
-                <div class="mt-4 text-xs text-gray-600">
-                    <div class="flex flex-wrap gap-3">
-                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#1ABC9C"></span> Complete</div>
-                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#48C9B0"></span> Partial</div>
-                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#D1F2EB"></span> Future</div>
-                        <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#FCA5A5"></span> Missed</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-1 space-y-4">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div class="flex items-center justify-between mb-2">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-7" style="gap:28px;">
+            <div class="lg:col-span-2 space-y-7" style="row-gap:28px;">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-7">
+                    <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
                         <div>
-                            <div class="text-xs text-teal-700 font-semibold" id="cal-side-date-label"></div>
+                            <h2 class="text-lg font-semibold text-gray-900">Adherence Calendar</h2>
+                            <p class="text-sm text-gray-600">Track your daily intake and stay consistent.</p>
+                        </div>
+                        <div class="flex items-center flex-wrap gap-2">
+                            <button type="button" id="cal-prev" class="h-9 px-3 border border-gray-200 rounded-lg text-sm hover:bg-teal-50 hover:text-teal-700">Prev</button>
+                            <button type="button" id="cal-today" class="h-9 px-3 border border-gray-200 rounded-lg text-sm hover:bg-teal-50 hover:text-teal-700">Today</button>
+                            <button type="button" id="cal-next" class="h-9 px-3 border border-gray-200 rounded-lg text-sm hover:bg-teal-50 hover:text-teal-700">Next</button>
+                            <div class="ml-1 text-sm font-semibold text-gray-900" id="cal-title"></div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-gray-200 bg-gray-50/30 p-3 sm:p-4">
+                        <div class="grid grid-cols-7 gap-2 sm:gap-3 text-[11px] sm:text-xs text-gray-600 mb-3">
+                            <div class="text-center">Sun</div>
+                            <div class="text-center">Mon</div>
+                            <div class="text-center">Tue</div>
+                            <div class="text-center">Wed</div>
+                            <div class="text-center">Thu</div>
+                            <div class="text-center">Fri</div>
+                            <div class="text-center">Sat</div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-2 sm:gap-3" id="cal-grid"></div>
+                    </div>
+
+                    <div class="mt-4 text-xs text-gray-600">
+                        <div class="flex flex-wrap gap-4">
+                            <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#1ABC9C"></span> Complete</div>
+                            <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#48C9B0"></span> Partial</div>
+                            <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#D1F2EB"></span> Future</div>
+                            <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded" style="background:#FCA5A5"></span> Missed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-7">
+                    <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
+                        <div>
+                            <div class="text-xs font-semibold" style="color:#1ABC9C" id="cal-side-date-label"></div>
                             <div class="text-lg font-semibold text-gray-900" id="cal-side-title">Schedule</div>
                         </div>
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:#D1F2EB;color:#0f766e;">📅</div>
-                    </div>
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="text-xs text-gray-600">Update times for a medicine (future doses only)</div>
-                        <button type="button" id="cal-adjust-times" class="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50">Adjust Times</button>
+                        <button type="button" id="cal-adjust-times" class="h-9 px-3 border rounded-lg text-sm" style="border-color:#1ABC9C;color:#1ABC9C;">Adjust Times</button>
                     </div>
                     <div class="space-y-2" id="cal-side-list">
                         <div class="text-sm text-gray-600">Select a day to view doses.</div>
                     </div>
                 </div>
+            </div>
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div class="text-xs text-teal-700 font-semibold">Adherence</div>
-                    <div class="mt-1 flex items-end justify-between">
+            <div class="lg:col-span-1 space-y-7" style="row-gap:28px;">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
                         <div>
-                            <div class="text-3xl font-semibold text-gray-900">{{ "%.0f"|format(analytics.adherence_percentage) }}%</div>
-                            <div class="text-xs text-gray-600">Total: {{ analytics.total_doses }} • Taken: {{ analytics.taken_doses }}</div>
+                            <div class="text-sm font-semibold text-gray-900">Adherence</div>
+                            <div class="mt-2 text-3xl font-bold" style="color:#1ABC9C">{{ "%.0f"|format(analytics.adherence_percentage) }}%</div>
+                            <div class="text-xs text-gray-600 mt-1">Total: {{ analytics.total_doses }} • Taken: {{ analytics.taken_doses }} • Streak: {{ analytics.current_streak }} day(s)</div>
                         </div>
-                        <div class="w-14 h-10 rounded-md" style="background:#D1F2EB"></div>
+                        <div class="w-full sm:w-36">
+                            <div class="h-2.5 rounded-full" style="background:#E5E7EB"></div>
+                            <div class="-mt-2.5 h-2.5 rounded-full" data-cal-adherence-fill="1" data-cal-adherence="{{ analytics.adherence_percentage or 0 }}" style="width:0;background:#1ABC9C"></div>
+                        </div>
                     </div>
-                    <div class="mt-3 text-xs text-gray-600">Streak: {{ analytics.current_streak }} day(s)</div>
                 </div>
 
-                <div class="rounded-lg border border-gray-200 p-4" style="background:#F0FDFA">
+                <div class="rounded-2xl p-5 border" style="background:#D1F2EB;border-color:#E5E7EB;border-left:4px solid #48C9B0;">
                     <div class="text-sm font-semibold text-gray-900">Instruction Reminder</div>
-                    <div class="text-xs text-gray-700 mt-1">If you miss a dose, take it as soon as you remember. If it’s close to the next dose, skip and continue as scheduled.</div>
+                    <div class="text-xs text-gray-800 mt-1">If you miss a dose, take it as soon as you remember. If it’s close to the next dose, skip and continue as scheduled.</div>
                 </div>
             </div>
         </div>
@@ -732,6 +750,24 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
             v = Math.max(0, Math.min(100, v));
             var color = el.getAttribute('data-conf-color') || '#1ABC9C';
             el.style.background = color;
+            el.style.transition = 'width 900ms cubic-bezier(.22,1.0,.36,1)';
+            requestAnimationFrame(function() {
+                el.style.width = v + '%';
+            });
+        });
+    } catch (e) {
+        return;
+    }
+})();
+
+(function() {
+    try {
+        var fills = document.querySelectorAll('[data-cal-adherence-fill="1"]');
+        if (!fills || !fills.length) return;
+        fills.forEach(function(el) {
+            var v = parseFloat(el.getAttribute('data-cal-adherence') || '0');
+            if (isNaN(v)) v = 0;
+            v = Math.max(0, Math.min(100, v));
             el.style.transition = 'width 900ms cubic-bezier(.22,1.0,.36,1)';
             requestAnimationFrame(function() {
                 el.style.width = v + '%';
@@ -1227,28 +1263,36 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
 
             var cell = document.createElement('button');
             cell.type = 'button';
-            cell.className = 'h-16 sm:h-20 rounded border border-gray-200 p-1 sm:p-2 text-left focus:outline-none';
+            cell.className = 'cal-day-btn h-[60px] sm:h-[70px] lg:h-[90px] rounded-[14px] border p-2 text-left focus:outline-none transition-transform';
             cell.style.background = hasDoses ? dayColor(status) : '#ffffff';
             if (hasDoses) {
-                cell.className += ' hover:shadow-sm';
+                cell.className += ' border-gray-200 hover:-translate-y-0.5 hover:shadow-sm';
             } else {
                 cell.disabled = true;
-                cell.className += ' opacity-60 cursor-not-allowed';
+                cell.className += ' border-gray-200 opacity-60 cursor-not-allowed';
             }
             if (hasDoses && iso === selectedIso) {
-                cell.style.outline = '2px solid #0F766E';
-                cell.style.outlineOffset = '2px';
+                cell.style.background = '#D1F2EB';
+                cell.style.border = '2px solid #1ABC9C';
             }
             cell.innerHTML = '' +
                 '<div class="flex items-center justify-between">' +
                 '  <div class="text-[11px] sm:text-xs font-semibold" style="color:#111827">' + day + '</div>' +
                 '  <div class="text-[10px] sm:text-[11px]" style="color:#111827">' + (total ? (taken + '/' + total) : '') + '</div>' +
                 '</div>' +
-                '<div class="mt-1 sm:mt-2 text-[10px] sm:text-[11px]" style="color:#111827">' + (total ? (total + ' doses') : '') + '</div>' +
+                '<div class="mt-1 sm:mt-2 text-[10px] sm:text-[11px] hidden sm:block" style="color:#111827">' + (total ? (total + ' doses') : '') + '</div>' +
                 dots;
 
             cell.addEventListener('click', function(isoCopy) {
                 return async function() {
+                    try {
+                        this.style.transform = 'scale(1.03)';
+                        setTimeout(function(btn) {
+                            try { btn.style.transform = ''; } catch (e) { return; }
+                        }, 130, this);
+                    } catch (e) {
+                        return;
+                    }
                     selectedIso = isoCopy;
                     await render();
                     await renderSidePanel(isoCopy);

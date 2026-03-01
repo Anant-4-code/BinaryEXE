@@ -50,55 +50,72 @@
             --aqua-4:#D1F2EB;
             --glow-x: 50vw;
             --glow-y: 20vh;
-            --glow-size: 560px;
-            --glow-opacity: 0.70;
+            --glow-core-size: 340px;
+            --glow-halo-size: 720px;
+            --glow-opacity: 0.78;
+            --glow-boost: 0;
         }
 
         .cursor-glow-bg{
             position: fixed;
             inset: 0;
             pointer-events: none;
-            z-index: 0;
+            z-index: 40;
             opacity: 0;
             background:
                 radial-gradient(
-                    var(--glow-size) circle at var(--glow-x) var(--glow-y),
-                    rgba(26,188,156,0.16),
-                    rgba(72,201,176,0.10) 26%,
-                    rgba(209,242,235,0.08) 44%,
+                    var(--glow-core-size) circle at var(--glow-x) var(--glow-y),
+                    rgba(26,188,156,0.28),
+                    rgba(72,201,176,0.16) 32%,
                     rgba(209,242,235,0) 62%
+                ),
+                radial-gradient(
+                    var(--glow-halo-size) circle at var(--glow-x) var(--glow-y),
+                    rgba(72,201,176,0.14),
+                    rgba(209,242,235,0.10) 34%,
+                    rgba(209,242,235,0) 68%
                 );
-            filter: blur(0px);
+            mix-blend-mode: multiply;
+            filter: blur(8px);
             transform: translateZ(0);
-            transition: opacity 240ms ease;
+            transition: opacity 240ms ease, filter 240ms ease;
         }
 
         html.has-cursor-glow .cursor-glow-bg{
-            opacity: var(--glow-opacity);
+            opacity: calc(var(--glow-opacity) + (var(--glow-boost) * 0.16));
         }
 
-        .min-h-screen{ position: relative; z-index: 1; }
+        .min-h-screen{ position: relative; }
 
         @media (max-width: 1024px){
-            :root{ --glow-size: 460px; --glow-opacity: 0.62; }
+            :root{ --glow-core-size: 280px; --glow-halo-size: 620px; --glow-opacity: 0.70; }
         }
 
         @media (max-width: 640px){
-            :root{ --glow-size: 360px; --glow-opacity: 0.54; }
+            :root{ --glow-core-size: 220px; --glow-halo-size: 500px; --glow-opacity: 0.62; }
         }
 
         @media (prefers-reduced-motion: reduce){
+            :root{ --glow-boost: 0; }
             html.has-cursor-glow .cursor-glow-bg{ opacity: 0; }
         }
 
         .dash-shell{
-            max-width: 1120px;
+            max-width: 1280px;
             margin-left: auto;
             margin-right: auto;
-            padding-left: 24px;
-            padding-right: 24px;
-            padding-top: 28px;
+            padding-left: 32px;
+            padding-right: 32px;
+            padding-top: 32px;
             padding-bottom: 48px;
+        }
+
+        @media (max-width: 1024px){
+            .dash-shell{
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-top: 24px;
+            }
         }
 
         @media (max-width: 640px){
@@ -560,6 +577,8 @@
             var lastY = window.innerHeight * 0.2;
             var targetX = lastX;
             var targetY = lastY;
+            var boost = 0;
+            var decayPending = false;
 
             function render() {
                 pending = false;
@@ -569,10 +588,27 @@
                 root.style.setProperty('--glow-y', lastY.toFixed(1) + 'px');
             }
 
+            function decayBoost() {
+                decayPending = false;
+                boost = boost * 0.86;
+                if (boost < 0.01) boost = 0;
+                root.style.setProperty('--glow-boost', boost.toFixed(3));
+                if (boost > 0) {
+                    decayPending = true;
+                    requestAnimationFrame(decayBoost);
+                }
+            }
+
             function onMove(e) {
                 if (!e) return;
                 targetX = e.clientX;
                 targetY = e.clientY;
+                boost = 1;
+                root.style.setProperty('--glow-boost', '1');
+                if (!decayPending) {
+                    decayPending = true;
+                    requestAnimationFrame(decayBoost);
+                }
                 if (!pending) {
                     pending = true;
                     requestAnimationFrame(render);
