@@ -1,287 +1,987 @@
-# Sanjeevani AI (MediScript AI)
+# 🏥 Sanjeevani AI - Medical Prescription Management System
 
-FastAPI web app that:
+![Python](https://img.shields.io/badge/Python-3.9+-blue?style=flat-square&logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green?style=flat-square&logo=fastapi)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
-- Uploads prescription images
-- Runs OCR
-- Extracts structured medicines + patient/doctor details using AI
-- Generates per-medicine dose schedules
-- Provides calendar-based dose tracking with real-time constraints
-- Shows adherence analytics
-- Exports structured prescription data
+> **Sanjeevani AI** is an intelligent prescription management system that digitizes paper prescriptions, extracts medicine details using AI, and provides real-time medication tracking with adherence analytics.
 
-## Models Used (Database)
+---
 
-Defined in `app/models/models.py`:
+## 🎯 Features
 
-- **User**
-- **Prescription**
-- **Medicine**
-- **Dose**
-- **Notification**
+✨ **Core Capabilities:**
+- 📸 **Prescription Upload & OCR** - Upload prescription images and extract text using advanced handwriting recognition
+- 🤖 **AI-Powered Extraction** - Automatically extract medicines, dosages, and patient/doctor details using Ollama (Llama 3.2:3b)
+- 💊 **Medicine Information** - Get AI-generated explanations of medicines, uses, side effects, and age recommendations
+- 📅 **Smart Dose Scheduling** - Create calendar-based dose schedules with time-aware constraints
+- 🔔 **Notifications** - Real-time reminders for upcoming, missed, and completed doses
+- 📊 **Adherence Analytics** - Track medication compliance and visualize adherence patterns
+- 🌐 **Multi-Language Support** - Transliterate prescriptions to Hindi, Tamil, Kannada, Marathi, Bengali, and more
+- 📄 **Export & Reports** - Generate structured prescription reports in multiple formats
+- 🔐 **User Authentication** - Secure login with JWT-based authentication
 
-Enums stored as strings:
+---
 
-- **PrescriptionStatusEnum** (`needs_review`, `active`, `completed`)
-- **NotificationTypeEnum** (`upcoming`, `missed`, `completed`)
+## 📋 Tech Stack
 
-## Commands to Run the App
+### Backend
+- **Framework:** [FastAPI](https://fastapi.tiangolo.com/) - Modern, fast Python web framework
+- **Server:** Uvicorn - ASGI application server
+- **ORM:** SQLAlchemy - SQL toolkit and Object Relational Mapper
+- **Database:** SQLite (default, configurable to PostgreSQL)
+- **Authentication:** JWT + Passlib (bcrypt hashing)
+- **API Validation:** Pydantic v2 with BaseSettings
 
-```powershell
+### Frontend
+- **Templating:** Jinja2
+- **Styling:** TailwindCSS (via CDN)
+- **Charts:** Chart.js
+- **JavaScript:** Vanilla JS
+
+### AI & NLP Services
+- **LLM:** Ollama with Llama 3.2:3b (Local, runs offline)
+- **Handwriting Recognition:** Tesseract OCR / Custom service
+- **Text Extraction:** Tesseract-compatible backends
+- **Translation:** Deep Translator
+- **Fuzzy Matching:** RapidFuzz
+
+### Utilities
+- **Image Processing:** Pillow, AVIF plugin
+- **Document Generation:** ReportLab (PDF exports)
+- **Testing:** Pytest
+- **Environment:** Python-dotenv
+
+---
+
+## 🏗️ Architecture & Data Flow
+
+### System Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     USER INTERFACE                           │
+│              (Jinja2 Templates + TailwindCSS)               │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                      FASTAPI SERVER                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ Auth Router  │  │ Upload Router│  │ Workspace Router │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │Calendar Route│  │NotifyRouter  │  │Export/Dashboard  │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+         ┌───────────────┼───────────────┐
+         │               │               │
+    ┌────▼────┐    ┌─────▼─────┐   ┌───▼──────┐
+    │ Services │    │Core Layer │   │ Schemas  │
+    │ (AI/Biz) │    │ (DB/Auth) │   │(Validation)
+    └────┬────┘    └─────┬─────┘   └──────────┘
+         │               │
+    ┌────▼─────────────────▼────────────┐
+    │      SQLAlchemy ORM Models        │
+    │  (User, Prescription, Medicine,   │
+    │    Dose, Notification, etc.)      │
+    └────┬─────────────────────────────┘
+         │
+    ┌────▼──────────────────┐
+    │   SQLite Database     │
+    │  (mediscript.db)      │
+    └──────────────────────┘
+
+External APIs:
+- Google Generative AI (Gemini LLM)
+- Optional Custom Handwriting OCR
+- Optional Rapid API Services
+```
+
+### Data Flow: Prescription Processing
+
+```
+1. UPLOAD PHASE
+   ├─ User uploads prescription image
+   ├─ File saved to /uploads directory
+   └─ Triggers handwriting_service.run_handwriting_model()
+
+2. OCR & TEXT EXTRACTION
+   ├─ OCR engine processes image
+   ├─ Returns raw_text to Prescription model
+   └─ confidence_score calculated
+
+3. AI EXTRACTION (Ollama/Llama 3.2:3b)
+   ├─ Raw text sent to gemma_service
+   ├─ Three parallel extractions:
+   │  ├─ Medicine Details (gemma_extract_medicines)
+   │  ├─ Patient/Doctor Info (gemma_extract_patient_doctor)
+   │  └─ Medicine Explanations (gemma_explain_medicine)
+   └─ Results stored as JSON in database
+
+4. DOSE SCHEDULING
+   ├─ calendar_service.generate_doses_for_prescription()
+   ├─ Creates Dose records for each medicine
+   ├─ Frequency-aware scheduling (daily, BD, TDS, etc.)
+   └─ Duration-based termination dates
+
+5. NOTIFICATION SETUP
+   ├─ notification_service creates Notification records
+   ├─ scheduled_for timestamps calculated
+   └─ Sent status tracked for real-time reminders
+
+6. USER DASHBOARD
+   ├─ analytics_service aggregates data
+   ├─ Counts: taken, missed, upcoming doses
+   ├─ Adherence % = (taken / total) * 100
+   └─ Charts generated via Chart.js
+
+7. EXPORT & REPORTS
+   ├─ export_service.generate_pdf_report()
+   ├─ export_service.export_to_json()
+   └─ Option to override values before export
+```
+
+---
+
+## 📊 Database Models
+
+### Entity Relationship Diagram
+
+```
+┌──────────────┐
+│    User      │
+├──────────────┤
+│ id (PK)      │
+│ email        │
+│ hashed_pwd   │
+│ created_at   │
+└────────┬─────┘
+         │ 1:N
+         │
+    ┌────▼─────────────────┐
+    │  Prescription         │
+    ├───────────────────────┤
+    │ id (PK)               │
+    │ user_id (FK)          │
+    │ title                 │
+    │ caption               │
+    │ raw_text              │
+    │ image_path            │
+    │ confidence_score      │
+    │ status (enum)         │
+    │ patient_details_json  │
+    │ doctor_details_json   │
+    │ transliterated_json   │
+    │ export_overrides_json │
+    │ created_at            │
+    └────┬──────────────┬───┘
+         │ 1:N          │ 1:N
+         │              │
+    ┌────▼──────────┐  ┌─▼───────────────┐
+    │  Medicine     │  │  Dose           │
+    ├───────────────┤  ├─────────────────┤
+    │ id (PK)       │  │ id (PK)         │
+    │ presc_id (FK) │  │ presc_id (FK)   │
+    │ orig_name     │  │ med_id (FK)     │
+    │ norm_name     │  │ date            │
+    │ dose          │  │ time            │
+    │ frequency     │  │ taken (bool)    │
+    │ duration_days │  │ taken_at        │
+    │ instructions  │  └─────────────────┘
+    │ confidence    │
+    │ explanation   │
+    │ age_range     │
+    └───────────────┘
+
+    ┌──────────────────────┐
+    │  Notification        │
+    ├──────────────────────┤
+    │ id (PK)              │
+    │ presc_id (FK)        │
+    │ dose_id (FK, null ok)│
+    │ type (enum)          │
+    │ message              │
+    │ scheduled_for        │
+    │ sent (bool)          │
+    │ created_at           │
+    └──────────────────────┘
+```
+
+### Model Details
+
+| Model | Purpose | Key Fields |
+|-------|---------|-----------|
+| **User** | User accounts | email, hashed_password, created_at |
+| **Prescription** | Medical prescriptions | patient/doctor JSON, status, OCR text |
+| **Medicine** | Extracted medicine details | dosage, frequency, AI-generated explanation |
+| **Dose** | Individual medication instances | date/time, taken status |
+| **Notification** | Medication reminders | type (upcoming/missed/completed), scheduled time |
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+- **Python:** 3.9 or higher
+- **Git:** For version control
+- **Virtual Environment:** venv (recommended)
+- **Ollama:** Download from https://ollama.ai/download (runs local LLM)
+
+### Step 1️⃣ Clone the Repository
+
+```bash
+# Clone from GitHub (if applicable)
+git clone https://github.com/yourusername/sanjeevani-ai.git
+cd sanjeevani-ai/mediscript_ai
+
+# Or navigate to existing folder
 cd c:\Users\HP\Downloads\Sanjeevani\mediscript_ai
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload
 ```
 
-## Tech Stack
+### Step 2️⃣ Create Virtual Environment
 
-- Backend: FastAPI, SQLAlchemy, Jinja2
-- DB: SQLite (default) via SQLAlchemy
-- Frontend: Jinja2 templates + TailwindCSS + vanilla JavaScript
-- Charts: Chart.js (via CDN in templates)
-- AI/Extraction: Google Gemini (`google-generativeai`), optional handwriting/OCR backend
-
-## Project File Structure
-
-```text
-mediscript_ai/
-  app/
-    main.py
-    config.py
-    utils.py
-    core/
-      database.py
-      security.py
-    models/
-      models.py
-    schemas/
-      schemas.py
-    routers/
-      auth.py
-      upload.py
-      workspace.py
-      calendar.py
-      notifications.py
-      export.py
-      dashboard.py
-    services/
-      analytics_service.py
-      calendar_service.py
-      export_service.py
-      gemma_service.py
-      handwriting_service.py
-      notification_service.py
-      translation_service.py
-      validation_service.py
-    templates/
-      base.html
-      home.html
-      workspace.html
-    assets/
-  static/
-  uploads/
-  tests/
-    test_gemma_service.py
-  requirements.txt
-  mediscript.db
-  migrate_add_columns.py
-  .env
-```
-
-## Setup
-
-### 1) Create a virtual environment
-
-```bash
-python -m venv .venv
-```
-
-Activate:
-
-- Windows PowerShell
-
+**Windows (PowerShell):**
 ```powershell
-.venv\Scripts\Activate.ps1
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 2) Install dependencies
+**Windows (Command Prompt):**
+```cmd
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+**Linux/macOS:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### Step 3️⃣ Install Dependencies
 
 ```bash
+# Upgrade pip (recommended)
+pip install --upgrade pip
+
+# Install from requirements
 pip install -r requirements.txt
 ```
 
-### 3) Configure environment variables
-
-Create/edit `.env` in the project root.
-
-Supported keys (see `app/config.py`):
-
-- `DATABASE_URL` (default: `sqlite:///./mediscript.db`)
-- `JWT_SECRET_KEY` (default in code is `CHANGE_ME_IN_PRODUCTION`)
-- `HANDWRITING_MODEL_ENDPOINT` (optional)
-- `HANDWRITING_RAPIDAPI_KEY` (optional)
-- `GEMINI_API_KEY` (optional but required to run Gemini extraction)
-
-### 4) Run the server
-
-```bash
-uvicorn app.main:app --reload
+**Core Dependencies Installed:**
+```
+fastapi                  # Web framework
+uvicorn[standard]       # ASGI server
+sqlalchemy              # ORM
+alembic                 # Database migrations
+psycopg2-binary        # PostgreSQL adapter (optional)
+pydantic                # Data validation
+passlib[bcrypt]         # Password hashing
+python-jose[crypto]    # JWT tokens
+python-dotenv          # Environment variables
+pillow                  # Image processing
+deep-translator         # Multi-language support
+reportlab               # PDF generation
+pytest                  # Testing framework
 ```
 
-Open:
+**Note:** Ollama runs locally on your machine - no API keys required!
 
-- Home page: `http://127.0.0.1:8000/`
+### Step 4️⃣ Configure Environment
 
-## How the App Works (High Level)
+Create `.env` file in `mediscript_ai/` directory:
 
-- Upload a prescription image from the home page.
-- The backend stores the file under `uploads/` and creates a `Prescription` record.
-- The app then runs a unified extraction pipeline:
-  - Medicine extraction (structured list)
-  - Patient/Doctor details extraction
-- Once medicines are confirmed, dose schedules are generated into the `doses` table.
-- Calendar endpoints provide:
-  - Monthly summaries
-  - Daily dose lists
-  - Dose toggle (taken/pending) with time window restrictions
-  - Rescheduling of future dose times
-- Analytics endpoints compute adherence/streaks and return a daily series for charts.
+```bash
+# Core Settings
+APP_NAME="Sanjeevani AI"
+DEBUG=True
 
-## Models Used
+# Database
+DATABASE_URL="sqlite:///./mediscript.db"
+# For PostgreSQL: DATABASE_URL="postgresql://user:password@localhost:5432/mediscript"
 
-All database models are defined in `app/models/models.py` (SQLAlchemy ORM). These are the tables used by the application.
+# Security
+JWT_SECRET_KEY="your-super-secret-key-change-this-in-production"
+JWT_ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours
 
-### 1) `User`
+# AI Services - Ollama (Local LLM)
+OLLAMA_BASE_URL="http://localhost:11434"  # Ollama server (default)
+OLLAMA_MODEL="llama3.2:3b"  # Local model
 
-Represents an account that owns prescriptions.
+# Optional: Handwriting OCR Service
+HANDWRITING_MODEL_ENDPOINT="http://your-ocr-api:port"
+HANDWRITING_RAPIDAPI_KEY="your-rapidapi-key"
 
-- **Fields**
-  - `id` (PK)
-  - `email` (unique)
-  - `hashed_password`
-  - `created_at`
-- **Relationships**
-  - `prescriptions`: one-to-many with `Prescription`
+# OCR Configuration
+OCR_ENGINE="auto"  # Options: auto, tesseract, pymupdf
+TESSERACT_CMD="C:\\Program Files\\Tesseract-OCR\\tesseract.exe"  # Windows path
+```
 
-### 2) `Prescription`
+### Step 5️⃣ Initialize Database
 
-Represents a single uploaded prescription (image + extracted text + AI output).
+```bash
+# Database will auto-initialize on first run
+# Or manually:
+python -c "from app.core.database import Base, engine; Base.metadata.create_all(bind=engine)"
+```
 
-- **Fields**
-  - `id` (PK)
-  - `user_id` (FK → `users.id`)
-  - `title`
-  - `caption`
-  - `raw_text` (OCR result)
-  - `image_path` (path under `uploads/`)
-  - `confidence_score`
-  - `status` (string values from `PrescriptionStatusEnum`)
-  - `created_at`
-  - `patient_details_json` (JSON stored as string)
-  - `doctor_details_json` (JSON stored as string)
-  - `transliterated_json` (language → text map as JSON string)
-  - `export_overrides_json` (JSON string)
-- **Relationships**
-  - `user`: many-to-one with `User`
-  - `medicines`: one-to-many with `Medicine` (cascade delete)
-  - `doses`: one-to-many with `Dose` (cascade delete)
-  - `notifications`: one-to-many with `Notification` (cascade delete)
+---
 
-### 3) `Medicine`
+## 🎮 Running the Application
 
-A medicine line item extracted from the prescription.
+### Development Mode (with Auto-Reload)
 
-- **Fields**
-  - `id` (PK)
-  - `prescription_id` (FK → `prescriptions.id`)
-  - `original_name`
-  - `normalized_name`
-  - `dose`
-  - `frequency` (e.g., `OD`, `BD`, `TDS`, `PRN`)
-  - `duration_days`
-  - `instructions`
-  - `confidence`
-  - `explanation` (AI-generated uses/side-effects, etc.)
-  - `age_range`
-- **Relationships**
-  - `prescription`: many-to-one with `Prescription`
-  - `doses`: one-to-many with `Dose` (cascade delete)
+```bash
+# Make sure virtual environment is activated
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+```
 
-### 4) `Dose`
+**Output:**
+```
+Uvicorn running on http://127.0.0.1:8001
+- Docs: http://127.0.0.1:8001/docs
+- ReDoc: http://127.0.0.1:8001/redoc
+```
 
-A single scheduled dose instance for a specific medicine on a specific date/time.
+### Production Mode
 
-- **Fields**
-  - `id` (PK)
-  - `prescription_id` (FK → `prescriptions.id`)
-  - `medicine_id` (FK → `medicines.id`)
-  - `date`
-  - `time`
-  - `taken` (bool)
-  - `taken_at` (datetime when marked taken)
-- **Relationships**
-  - `prescription`: many-to-one with `Prescription`
-  - `medicine`: many-to-one with `Medicine`
+```bash
+# Without auto-reload (faster, safer)
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --workers 4
+```
 
-### 5) `Notification`
+### Access the Application
 
-Represents scheduled/derived notifications about upcoming/missed/completed doses.
+| URL | Purpose |
+|-----|---------|
+| `http://localhost:8001` | Main application |
+| `http://localhost:8001/docs` | Interactive API documentation (Swagger UI) |
+| `http://localhost:8001/redoc` | ReDoc API documentation |
 
-- **Fields**
-  - `id` (PK)
-  - `prescription_id` (FK → `prescriptions.id`)
-  - `dose_id` (nullable FK → `doses.id`)
-  - `type` (string values from `NotificationTypeEnum`)
-  - `message`
-  - `scheduled_for`
-  - `sent`
-  - `created_at`
-- **Relationships**
-  - `prescription`: many-to-one with `Prescription`
+### For Running Tests
 
-### Enums (stored as strings)
+```bash
+# Run all tests
+pytest
 
-- `PrescriptionStatusEnum`
-  - `needs_review`, `active`, `completed`
-- `NotificationTypeEnum`
-  - `upcoming`, `missed`, `completed`
+# Run with verbose output
+pytest -v
 
-## Pydantic Schemas Used (API DTOs)
+# Run specific test file
+pytest tests/test_gemma_service.py
 
-Defined in `app/schemas/schemas.py`:
+# Run with coverage report
+pytest --cov=app tests/
+```
 
-- `UserCreate`, `UserOut`
-- `Token`
-- `MedicineBase`, `MedicineCreate`, `MedicineOut`
-- `PrescriptionBase`, `PrescriptionCreate`, `PrescriptionOut`
-- `DoseOut`
-- `AnalyticsSummary`
-- `NotificationOut`
-- `OCRResult`
-- `GemmaMedicine`, `ExtractionResult`
-- `PatientDoctorExtraction`
+---
 
-## Key Routes
+## 📁 Project Structure
 
-- `app/routers/dashboard.py`
-  - Basic dashboard/home navigation
-- `app/routers/upload.py`
-  - Upload prescription image
-- `app/routers/workspace.py`
-  - Workspace UI, unified extraction (`/workspace/{id}/refresh-all`), confirmation, edits
-- `app/routers/calendar.py`
-  - Calendar APIs (month/day summary, dose toggle, reschedule, analytics series)
-- `app/routers/export.py`
-  - Export endpoints
-- `app/routers/notifications.py`
-  - Notifications endpoints
-- `app/routers/auth.py`
-  - Authentication endpoints
+```
+mediscript_ai/
+│
+├── app/                                    # Main application package
+│   ├── __init__.py                        # Package initializer
+│   ├── main.py                            # FastAPI app setup, routes, startup
+│   ├── config.py                          # Settings management (pydantic BaseSettings)
+│   ├── utils.py                           # Utility functions
+│   │
+│   ├── core/                              # Core functionality
+│   │   ├── database.py                    # SQLAlchemy setup, session dependency
+│   │   └── security.py                    # JWT token generation/verification
+│   │
+│   ├── models/                            # SQLAlchemy ORM models
+│   │   └── models.py                      # User, Prescription, Medicine, Dose, Notification
+│   │
+│   ├── schemas/                           # Pydantic request/response schemas
+│   │   └── schemas.py                     # API input/output contracts
+│   │
+│   ├── routers/                           # API route handlers
+│   │   ├── auth.py                        # Login, signup, token endpoints
+│   │   ├── upload.py                      # Prescription image upload & OCR
+│   │   ├── workspace.py                   # Prescription CRUD operations
+│   │   ├── calendar.py                    # Dose scheduling & calendar view
+│   │   ├── notifications.py               # Notification retrieval & management
+│   │   ├── export.py                      # PDF/JSON export endpoints
+│   │   └── dashboard.py                   # Analytics & adherence dashboard
+│   │
+│   ├── services/                          # Business logic & external integrations
+│   │   ├── gemma_service.py               # Ollama/Llama LLM extraction
+│   │   ├── handwriting_service.py         # OCR and image-to-text
+│   │   ├── calendar_service.py            # Dose schedule generation
+│   │   ├── notification_service.py        # Notification creation & sending
+│   │   ├── analytics_service.py           # Adherence calculations & stats
+│   │   ├── export_service.py              # PDF & structured exports
+│   │   ├── translation_service.py         # Multi-language transliteration
+│   │   └── validation_service.py          # Input validation business rules
+│   │
+│   ├── templates/                         # Jinja2 HTML templates
+│   │   ├── base.html                      # Base template with navbar, footer
+│   │   ├── home.html                      # Home/landing page
+│   │   ├── login.html                     # Login form
+│   │   ├── signup.html                    # Registration form
+│   │   ├── landing.html                   # Public landing page
+│   │   └── workspace.html                 # Main prescription management UI
+│   │
+│   ├── assets/                            # Static assets
+│   │   └── fonts/                         # Custom fonts (if any)
+│   │
+│   └── __pycache__/                       # Compiled Python cache
+│
+├── static/                                # Static files (CSS, JS, images)
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+├── templates/                             # Additional template files
+│
+├── tests/                                 # Unit & integration tests
+│   ├── __init__.py
+│   ├── test_gemma_service.py              # LLM extraction tests
+│   └── __pycache__/
+│
+├── uploads/                               # User-uploaded prescription images
+│
+├── migrate_add_columns.py                 # Database migration script
+├── mediscript.db                          # SQLite database file
+├── requirements.txt                       # Python dependencies
+├── .env                                   # Environment variables (create locally)
+├── .env.example                           # Example environment file
+├── .gitignore                             # Git ignore patterns
+├── README.md                              # This file
+└── .venv/                                 # Virtual environment (local only)
+```
 
-## Notes
+---
 
-- DB initialization happens on startup in `app/main.py`.
-- Default DB is SQLite (`mediscript.db`).
-- If you change models, prefer a migration tool; this repo also contains a lightweight SQLite column-add approach in `main.py` and `migrate_add_columns.py`.
+## 🔌 API Endpoints Overview
+
+### Authentication
+```
+POST   /auth/signup              - Register new user
+POST   /auth/login               - Login user (returns JWT token)
+POST   /auth/refresh             - Refresh JWT token
+```
+
+### Prescription Management
+```
+GET    /workspace/               - List all prescriptions
+POST   /workspace/               - Create new prescription
+GET    /workspace/{id}           - Get prescription details
+PUT    /workspace/{id}           - Update prescription
+DELETE /workspace/{id}           - Delete prescription
+```
+
+### Upload & OCR
+```
+POST   /upload                   - Upload prescription image & run OCR
+```
+
+### Dose Calendar
+```
+GET    /calendar/{prescription_id}    - Get dose calendar
+POST   /calendar/{dose_id}/mark-taken - Mark dose as taken
+```
+
+### Notifications
+```
+GET    /notifications/           - Get all notifications
+GET    /notifications/upcoming   - Get upcoming reminders
+```
+
+### Analytics & Dashboard
+```
+GET    /dashboard/               - Dashboard overview
+GET    /dashboard/analytics      - Adherence analytics
+```
+
+### Export
+```
+POST   /export/pdf               - Generate PDF report
+POST   /export/json              - Export as JSON
+```
+
+---
+
+## 🤖 AI Services & Models
+
+### 1. **Ollama LLM Service** (`gemma_service.py`)
+**Models Used:** Ollama with Llama 3.2:3b (Local, runs offline - no API key needed)
+
+**Capabilities (Local Processing):**
+- **Extract Medicines:** Parse dosage, frequency, duration from OCR text
+  ```json
+  {
+    "medicine": "Aspirin",
+    "dose": "500mg",
+    "frequency": "twice daily",
+    "duration": "7 days",
+    "instructions": "Take with food",
+    "age_range": "18-65 years"
+  }
+  ```
+- **Extract Patient/Doctor:** Parse demographic and clinic details
+  ```json
+  {
+    "patient": {
+      "name": "John Doe",
+      "age": "34",
+      "gender": "Male",
+      "address": "..."
+    },
+    "doctor": {
+      "name": "Dr. Smith",
+      "qualification": "MBBS, MD",
+      "specialization": "Cardiology"
+    }
+  }
+  ```
+- **Medicine Explanations:** Generate patient-friendly descriptions
+  - Uses, side effects, age recommendations
+  - Limited to 500 characters for simplicity
+
+### 2. **Handwriting Recognition Service** (`handwriting_service.py`)
+**Models Supported:**
+- Tesseract OCR (local, open-source)
+- Custom handwriting recognition API
+- Rapid API integration
+
+**Process:**
+- Image preprocessing (contrast, deskew)
+- Text extraction with confidence scoring
+- Returns structured OCR result
+
+### 3. **Calendar Service** (`calendar_service.py`)
+**Algorithm:** Frequency-aware dose scheduling
+- Parses human-readable frequency ("once daily", "twice daily", "TDS")
+- Generates Dose records for each occurrence
+- Respects duration (stop dates)
+- Timezone-aware scheduling
+
+### 4. **Translation Service** (`translation_service.py`)
+**Languages Supported:** Hindi, Tamil, Kannada, Marathi, Bengali, Telugu, Punjabi, Gujarati, Malayalam, Odia, Sanskrit
+
+**Technology:**
+- Deep Translator for base translation
+- Ollama/Llama (or Gemini if configured) for native script output in Devanagari, Tamil, Kannada, etc.
+- Preserves medical terminology accuracy
+
+### 5. **Analytics Service** (`analytics_service.py`)
+**Metrics Calculated:**
+- **Adherence %:** (doses_taken / total_doses) × 100
+- **Missed Count:** Doses not marked as taken
+- **Upcoming Count:** Future doses
+- **Trend Analysis:** Weekly/monthly adherence patterns
+
+### 6. **Export Service** (`export_service.py`)
+**Formats:**
+- PDF with structured layout (patient info, medicines, schedules)
+- JSON with all extracted details
+- CSV for spreadsheet import
+- Option to override values before export
+
+### 7. **Notification Service** (`notification_service.py`)
+**Types:**
+- **Upcoming:** 1 hour before scheduled dose
+- **Missed:** 2 hours after missed dose
+- **Completed:** Confirmation for taken doses
+
+---
+
+## 🔐 Security Features
+
+- **Password Hashing:** Bcrypt via Passlib
+- **JWT Authentication:** HS256 algorithm, configurable expiration
+- **CORS:** Configured for cross-origin requests
+- **SQL Injection Protection:** SQLAlchemy parameterized queries
+- **Input Validation:** Pydantic schema validation on all endpoints
+- **Environment Secrets:** Sensitive keys in `.env` (never in git)
+
+---
+
+## 🌐 Version Control & Git Commands
+
+### Initialize Git Repository (First Time Only)
+
+```bash
+git init
+git add .
+git commit -m "Initial commit: Sanjeevani AI prescription management system"
+```
+
+### Common Git Commands
+
+#### Cloning
+```bash
+git clone https://github.com/yourusername/sanjeevani-ai.git
+cd sanjeevani-ai
+```
+
+#### Branching
+```bash
+# Create new feature branch
+git checkout -b feature/medicine-search
+
+# List all branches
+git branch -a
+
+# Switch to branch
+git checkout feature/medicine-search
+
+# Delete branch
+git branch -d feature/medicine-search
+```
+
+#### Staging & Committing
+```bash
+# Check status
+git status
+
+# Stage all changes
+git add .
+
+# Stage specific file
+git add app/routers/upload.py
+
+# Commit with message
+git commit -m "feat: Add medicine search functionality"
+
+# Amend last commit
+git commit --amend -m "Updated message"
+```
+
+#### Pushing to Remote
+```bash
+# Push current branch
+git push origin feature/medicine-search
+
+# Push all branches
+git push origin --all
+
+# Force push (use carefully!)
+git push origin feature/name --force
+
+# Push with tracking (first time)
+git push -u origin feature/medicine-search
+```
+
+#### Pulling Updates
+```bash
+# Pull latest changes
+git pull origin main
+
+# Pull with rebase
+git pull --rebase origin main
+
+# Fetch without merging
+git fetch origin
+```
+
+#### Viewing History
+```bash
+# View commit log
+git log
+
+# Condensed log
+git log --oneline
+
+# With graph
+git log --graph --oneline --all
+
+# Commits by author
+git log --author="John Doe"
+
+# Changes in last 5 commits
+git log --stat -5
+```
+
+#### Merging
+```bash
+# Merge feature branch into main
+git checkout main
+git pull origin main
+git merge feature/medicine-search
+
+# Squash commits before merge
+git merge --squash feature/medicine-search
+git commit -m "feat: Add medicine search"
+
+# Abort merge if conflicts arise
+git merge --abort
+```
+
+#### Handling Conflicts
+```bash
+# View conflicts
+git status
+
+# Edit conflicted files manually, then:
+git add .
+git commit -m "Resolve merge conflicts"
+git push origin main
+```
+
+#### Tagging Releases
+```bash
+# Create lightweight tag
+git tag v1.0.0
+
+# Create annotated tag
+git tag -a v1.0.0 -m "Release version 1.0.0"
+
+# Push tags
+git push origin v1.0.0
+git push origin --tags
+
+# List tags
+git tag -l
+```
+
+#### Cleanup
+```bash
+# Remove untracked files (dry run)
+git clean -fd --dry-run
+
+# Remove untracked files (execute)
+git clean -fd
+
+# Reset to last commit
+git reset --hard HEAD
+
+# Reset to specific commit
+git reset --hard commit-hash
+
+# Revert a commit (creates new commit)
+git revert commit-hash
+```
+
+### GitHub Workflow Example
+
+```bash
+# 1. Create feature branch
+git checkout -b feature/dose-reminders
+
+# 2. Make changes and commit
+git add app/services/notification_service.py
+git commit -m "feat: Add SMS reminder capabilities"
+
+# 3. Push to remote
+git push origin feature/dose-reminders
+
+# 4. Create Pull Request on GitHub (UI)
+# 5. After review and approval, merge to main
+git checkout main
+git pull origin main
+git merge feature/dose-reminders
+git push origin main
+
+# 6. Delete feature branch
+git branch -d feature/dose-reminders
+git push origin --delete feature/dose-reminders
+```
+
+---
+
+## 📝 Environment Variables Reference
+
+```env
+# Application
+APP_NAME=Sanjeevani AI
+DEBUG=True/False
+
+# Database
+DATABASE_URL=sqlite:///./mediscript.db
+# PostgreSQL example:
+# DATABASE_URL=postgresql://user:password@localhost:5432/mediscript
+
+# JWT Security
+JWT_SECRET_KEY=your-super-secret-key-min-32-chars
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# AI Services - Ollama (Local LLM)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+
+# Optional: Google Gemini (if using instead of Ollama)
+# GEMINI_API_KEY=sk-your-google-api-key
+
+# Optional OCR
+HANDWRITING_MODEL_ENDPOINT=http://localhost:5000
+HANDWRITING_RAPIDAPI_KEY=your-rapidapi-key
+
+# OCR Configuration
+OCR_ENGINE=auto
+TESSERACT_CMD=/usr/bin/tesseract  # Linux
+# or
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe  # Windows
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_gemma_service.py
+
+# Run with verbose output
+pytest -v tests/
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+
+# Run tests matching pattern
+pytest -k "test_extract" -v
+```
+
+---
+
+## 📊 Database Migrations
+
+For PostgreSQL or production databases, use Alembic:
+
+```bash
+# Initialize Alembic (one-time)
+alembic init alembic
+
+# Create migration after model changes
+alembic revision --autogenerate -m "Add new columns"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback to previous version
+alembic downgrade -1
+```
+
+---
+
+## 🚨 Troubleshooting
+
+### Virtual Environment Not Activating
+```bash
+# Windows PowerShell error?
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Then try again
+.venv\Scripts\Activate.ps1
+```
+
+### Dependencies Installation Fails
+```bash
+# Upgrade pip first
+python -m pip install --upgrade pip
+
+# Install with compatible versions
+pip install --upgrade setuptools wheel
+pip install -r requirements.txt
+```
+
+### Gemini API Key Error
+- Ensure Ollama is running: `ollama serve` (or open the Ollama app)
+- Pull the Llama model: `ollama pull llama3.2:3b` (one-time)
+- Verify `.env` has correct `OLLAMA_BASE_URL=http://localhost:11434`
+- Download Ollama from: https://ollama.ai/download
+
+### Database Locked Error
+```bash
+# Remove corrupted database and reinit
+rm mediscript.db
+# App will auto-create on next run
+```
+
+### Port 8001 Already in Use
+```bash
+# Use different port
+python -m uvicorn app.main:app --reload --port 8002
+
+# Or find process using port (Linux/macOS)
+lsof -i :8001
+kill -9 process_id
+```
+
+---
+
+## 📚 Documentation & Resources
+
+- **FastAPI Docs:** https://fastapi.tiangolo.com/
+- **SQLAlchemy ORM:** https://docs.sqlalchemy.org/
+- **Pydantic Documentation:** https://docs.pydantic.dev/
+- **Ollama:** https://ollama.ai/ | https://llama.meta.com
+- **TailwindCSS:** https://tailwindcss.com/
+- **Chart.js:** https://www.chartjs.org/
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/your-feature`
+3. Commit changes: `git commit -m "Add your feature"`
+4. Push to branch: `git push origin feature/your-feature`
+5. Open Pull Request
+
+---
+
+## 📄 License
+
+MIT License - Feel free to use this project for personal or commercial purposes.
+
+---
+
+## 👨‍💻 Author
+
+**Sanjeevani AI Development Team**
+
+For issues, suggestions, or questions, please open an issue on GitHub or contact the development team.
+
+---
+
+## 🎉 Acknowledgments
+
+- **Ollama & Llama 3.2:3b** - Local LLM processing
+- **FastAPI community** - Excellent web framework
+- **SQLAlchemy team** - Powerful ORM
+- **All open-source contributors**
+
+---
+
+**Last Updated:** March 2026  
+**Version:** 1.0.0
+
+---
+
+### Quick Start Cheat Sheet
+
+```bash
+# Clone & Setup
+git clone <repo-url>
+cd mediscript_ai
+python -m venv .venv
+.venv\Scripts\Activate.ps1  # Windows
+
+# Install & Configure
+pip install -r requirements.txt
+# Create .env with GEMINI_API_KEY
+
+# Run App
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+# Visit http://localhost:8001
+
+# Push Changes
+git add .
+git commit -m "Your message"
+git push origin feature/branch-name
+```
+
+---
+
+💡 **Tip:** Bookmark the API docs at `http://localhost:8001/docs` for interactive API exploration!
