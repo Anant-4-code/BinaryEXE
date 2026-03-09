@@ -2,6 +2,7 @@ import json
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -14,6 +15,10 @@ from app.models.models import Prescription
 router = APIRouter(tags=["dashboard"])
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
+
+
+SAMPLE_EMAIL = "anantrai0809@gmail.com"
+SAMPLE_PASSWORD = "Anantrai"
 
 
 def _patient_info(prescription: Prescription) -> tuple:
@@ -39,6 +44,121 @@ def landing(request: Request) -> Any:
             "title": "Sanjeevani AI",
         },
     )
+
+
+@router.get("/login", response_class=HTMLResponse)
+def login_get(request: Request) -> Any:
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "hide_header": True,
+            "title": "Sign in",
+            "error": None,
+            "email": "",
+        },
+    )
+
+
+@router.get("/signup", response_class=HTMLResponse)
+def signup_get(request: Request) -> Any:
+    return templates.TemplateResponse(
+        "signup.html",
+        {
+            "request": request,
+            "hide_header": True,
+            "title": "Sign up",
+            "error": None,
+            "email": "",
+            "name": "",
+        },
+    )
+
+
+@router.post("/login", response_class=HTMLResponse)
+async def login_post(request: Request) -> Any:
+    form = await request.form()
+    email = (form.get("email") or "").strip()
+    password = (form.get("password") or "").strip()
+
+    if not email.lower().endswith(".com"):
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "hide_header": True,
+                "title": "Sign in",
+                "error": "Please enter a valid email address.",
+                "email": email,
+            },
+            status_code=400,
+        )
+
+    if email.lower() != SAMPLE_EMAIL.lower() or password != SAMPLE_PASSWORD:
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "hide_header": True,
+                "title": "Sign in",
+                "error": "Invalid email or password.",
+                "email": email,
+            },
+            status_code=400,
+        )
+
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
+@router.post("/signup", response_class=HTMLResponse)
+async def signup_post(request: Request) -> Any:
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    email = (form.get("email") or "").strip()
+
+    if email.lower() == SAMPLE_EMAIL.lower():
+        return templates.TemplateResponse(
+            "signup.html",
+            {
+                "request": request,
+                "hide_header": True,
+                "title": "Sign up",
+                "error": "Account already exists. Please sign in.",
+                "email": email,
+                "name": name,
+            },
+            status_code=400,
+        )
+
+    if not name:
+        return templates.TemplateResponse(
+            "signup.html",
+            {
+                "request": request,
+                "hide_header": True,
+                "title": "Sign up",
+                "error": "Please enter a valid name.",
+                "email": email,
+                "name": name,
+            },
+            status_code=400,
+        )
+
+    if not email.lower().endswith(".com"):
+        return templates.TemplateResponse(
+            "signup.html",
+            {
+                "request": request,
+                "hide_header": True,
+                "title": "Sign up",
+                "error": "Please enter a valid email address.",
+                "email": email,
+                "name": name,
+            },
+            status_code=400,
+        )
+
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

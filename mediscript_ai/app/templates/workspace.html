@@ -93,6 +93,32 @@
     {% if tab == 'overview' %}
         <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 lg:gap-6">
             <div class="space-y-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-xs font-semibold tracking-widest uppercase" style="color:#1ABC9C;">Audio Assistant</div>
+                            <div class="text-sm font-semibold text-gray-900">Listen to the main points</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Patient-friendly summary (medicines, timing, duration, key instructions).</div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap justify-end">
+                            <button type="button" id="tts-all-play" class="px-3 py-1.5 text-xs rounded-md" style="background:#1ABC9C;color:#ffffff;">Play</button>
+                            <button type="button" id="tts-all-pause" class="px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-md">Pause</button>
+                            <button type="button" id="tts-all-stop" class="px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-md">Stop</button>
+                            <select id="tts-all-lang" class="text-xs border border-gray-300 rounded-md px-2 py-1.5" aria-label="Summary language">
+                                <option value="hinglish" selected>Hinglish</option>
+                                <option value="english">English</option>
+                            </select>
+                            <select id="tts-all-voice" class="text-xs border border-gray-300 rounded-md px-2 py-1.5" aria-label="Summary voice"></select>
+                            <select id="tts-all-rate" class="text-xs border border-gray-300 rounded-md px-2 py-1.5" aria-label="Summary speed">
+                                <option value="0.85">0.85x</option>
+                                <option value="1" selected>1.0x</option>
+                                <option value="1.15">1.15x</option>
+                                <option value="1.3">1.3x</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 {% if image_url %}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
@@ -134,11 +160,26 @@
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="font-semibold">Structured Prescription (AI)</h2>
-                        <form action="/workspace/{{ prescription.id }}/refresh-all" method="post">
-                            <button type="submit" class="px-3 py-1 text-xs bg-gray-900 text-white rounded-md">
-                                Refresh All
-                            </button>
-                        </form>
+                        <div class="flex items-center gap-2 flex-wrap justify-end">
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="tts-structured-speak" class="px-2 py-1 text-xs rounded-md" style="background:#D1F2EB;color:#0F766E;">Speak</button>
+                                <button type="button" id="tts-structured-stop" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md">Stop</button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="tts-structured-voice" class="text-xs border border-gray-300 rounded-md px-2 py-1" aria-label="Structured voice"></select>
+                                <select id="tts-structured-rate" class="text-xs border border-gray-300 rounded-md px-2 py-1" aria-label="Structured speed">
+                                    <option value="0.85">0.85x</option>
+                                    <option value="1" selected>1.0x</option>
+                                    <option value="1.15">1.15x</option>
+                                    <option value="1.3">1.3x</option>
+                                </select>
+                            </div>
+                            <form action="/workspace/{{ prescription.id }}/refresh-all" method="post">
+                                <button type="submit" class="px-3 py-1 text-xs bg-gray-900 text-white rounded-md">
+                                    Refresh All
+                                </button>
+                            </form>
+                        </div>
                     </div>
                     <p class="text-xs text-gray-500 mb-3">Extract from OCR or edit each medicine below. Click &quot;Edit&quot; on a card to change name, dose, frequency, duration, instructions, and age range.</p>
                     {% if prescription.medicines %}
@@ -226,11 +267,26 @@
                                         <h3 class="font-semibold text-sm">Medicine Explanations</h3>
                                         <p class="text-xs text-gray-500 mt-0.5">Brief explanation with medicine name and age range (max 500 characters).</p>
                                     </div>
-                                    {% if prescription.medicines %}
-                                    <form action="/workspace/{{ prescription.id }}/explain-all-medicines" method="post" class="shrink-0">
-                                        <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md">Generate All</button>
-                                    </form>
-                                    {% endif %}
+                                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" id="tts-explain-speak" class="px-2 py-1 text-xs rounded-md" style="background:#D1F2EB;color:#0F766E;">Speak</button>
+                                            <button type="button" id="tts-explain-stop" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md">Stop</button>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <select id="tts-explain-voice" class="text-xs border border-gray-300 rounded-md px-2 py-1" aria-label="Explanation voice"></select>
+                                            <select id="tts-explain-rate" class="text-xs border border-gray-300 rounded-md px-2 py-1" aria-label="Explanation speed">
+                                                <option value="0.85">0.85x</option>
+                                                <option value="1" selected>1.0x</option>
+                                                <option value="1.15">1.15x</option>
+                                                <option value="1.3">1.3x</option>
+                                            </select>
+                                        </div>
+                                        {% if prescription.medicines %}
+                                        <form action="/workspace/{{ prescription.id }}/explain-all-medicines" method="post" class="shrink-0">
+                                            <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md">Generate All</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 {% for m in prescription.medicines %}
                                     <div class="border border-gray-100 rounded-md p-3 bg-blue-50/30">
@@ -258,15 +314,31 @@
                     <form action="/workspace/{{ prescription.id }}/transliterate" method="post" class="flex flex-col sm:flex-row sm:items-center gap-2">
                         <select name="language" required class="text-sm border border-gray-300 rounded-md px-3 py-1.5">
                             {% for value, label in transliteration_languages %}
-                            <option value="{{ value }}" {% if transliterated and transliterated.language == value %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ value }}" {% if (transliterated and transliterated.language == value) or ((not transliterated) and value == 'hindi') %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                         <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-md">Transliterate</button>
                     </form>
+                    <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="tts-translit-speak" class="px-2 py-1 text-xs rounded-md" style="background:#D1F2EB;color:#0F766E;">Speak</button>
+                            <button type="button" id="tts-translit-stop" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md">Stop</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="tts-translit-voice" class="text-xs border border-gray-300 rounded-md px-2 py-1" aria-label="Transliteration voice"></select>
+                            <select id="tts-translit-rate" class="text-xs border border-gray-300 rounded-md px-2 py-1" aria-label="Transliteration speed">
+                                <option value="0.85">0.85x</option>
+                                <option value="1" selected>1.0x</option>
+                                <option value="1.15">1.15x</option>
+                                <option value="1.3">1.3x</option>
+                            </select>
+                        </div>
+                        <div class="text-xs text-gray-500">Browser will speak the currently shown text.</div>
+                    </div>
                     {% if transliterated and transliterated.full %}
                     <div class="mt-4 border border-indigo-100 rounded-md p-3 bg-indigo-50/30">
                         <p class="text-xs font-semibold text-indigo-700 uppercase mb-2">Current: {{ transliterated.label }}</p>
-                        <pre class="text-sm text-gray-800 whitespace-pre-wrap max-h-52 overflow-auto" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Bengali', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Malayalam', 'Noto Sans Gurmukhi', sans-serif;">{{ transliterated.full }}</pre>
+                        <pre id="tts-translit-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-52 overflow-auto" style="font-family: 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Bengali', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Malayalam', 'Noto Sans Gurmukhi', sans-serif;">{{ transliterated.full }}</pre>
                     </div>
                     {% else %}
                     <p class="text-sm text-gray-500 mt-3">No transliteration yet. Select a language and click "Transliterate". Run AI Extraction and Patient/Doctor extraction first.</p>
@@ -814,6 +886,431 @@ document.querySelectorAll('.med-cancel-btn').forEach(function(btn) {
     } catch (e) {
         return;
     }
+})();
+
+(function() {
+    function safeText(el) {
+        if (!el) return '';
+        return (el.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function getVoices() {
+        try {
+            if (!('speechSynthesis' in window)) return [];
+            return window.speechSynthesis.getVoices() || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function fillVoiceSelect(selectEl) {
+        if (!selectEl) return;
+        var voices = getVoices();
+        var current = selectEl.value;
+        selectEl.innerHTML = '';
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Default voice';
+        selectEl.appendChild(opt);
+        voices.forEach(function(v) {
+            var o = document.createElement('option');
+            o.value = v.name;
+            o.textContent = v.name;
+            selectEl.appendChild(o);
+        });
+        if (current) selectEl.value = current;
+    }
+
+    function fillAllVoiceSelects() {
+        fillVoiceSelect(document.getElementById('tts-translit-voice'));
+        fillVoiceSelect(document.getElementById('tts-structured-voice'));
+        fillVoiceSelect(document.getElementById('tts-explain-voice'));
+        fillVoiceSelect(document.getElementById('tts-all-voice'));
+    }
+
+    function pickHindiVoice(selectEl) {
+        if (!selectEl || selectEl.value) return;
+        var voices = getVoices();
+        if (!voices || !voices.length) return;
+        var best = null;
+        // Prefer Google Hindi voice if available
+        best = voices.find(function(v) {
+            return v && v.lang && v.lang.toLowerCase().indexOf('hi') === 0 && v.name && v.name.toLowerCase().indexOf('google') >= 0;
+        }) || voices.find(function(v) {
+            return v && v.lang && v.lang.toLowerCase().indexOf('hi') === 0;
+        });
+        if (best) selectEl.value = best.name;
+    }
+
+    function pickPreferredVoice(selectEl, mode) {
+        if (!selectEl || selectEl.value) return;
+        var voices = getVoices();
+        if (!voices || !voices.length) return;
+
+        var langPrefix = (mode === 'english') ? 'en' : 'hi';
+        var best = voices.find(function(v) {
+            return v && v.lang && v.lang.toLowerCase().indexOf(langPrefix) === 0 && v.name && v.name.toLowerCase().indexOf('google') >= 0;
+        }) || voices.find(function(v) {
+            return v && v.lang && v.lang.toLowerCase().indexOf(langPrefix) === 0;
+        });
+        if (best) selectEl.value = best.name;
+    }
+
+    function speak(text, voiceName, rate) {
+        if (!text) return;
+        if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
+        try {
+            window.speechSynthesis.cancel();
+        } catch (e) {}
+
+        var utter = new SpeechSynthesisUtterance(text);
+        var voices = getVoices();
+        if (voiceName) {
+            var v = voices.find(function(x) { return x && x.name === voiceName; });
+            if (v) utter.voice = v;
+        }
+        var r = Number(rate);
+        if (isFinite(r) && r > 0) utter.rate = r;
+        try {
+            window.speechSynthesis.speak(utter);
+        } catch (e) {}
+    }
+
+    function stop() {
+        if (!('speechSynthesis' in window)) return;
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+
+    function pause() {
+        if (!('speechSynthesis' in window)) return;
+        try { window.speechSynthesis.pause(); } catch (e) {}
+    }
+
+    function resume() {
+        if (!('speechSynthesis' in window)) return;
+        try { window.speechSynthesis.resume(); } catch (e) {}
+    }
+
+    function structuredPatientText() {
+        var cards = Array.prototype.slice.call(document.querySelectorAll('.medicine-card .medicine-view'));
+        if (!cards.length) return '';
+        var parts = [];
+        parts.push('Main medicines and instructions.');
+        var seen = {};
+        cards.forEach(function(card, idx) {
+            var title = safeText(card.querySelector('p.font-semibold'));
+            var instruction = safeText(card.querySelector('.text-xs.text-gray-600.mt-3'));
+            var metas = Array.prototype.slice.call(card.querySelectorAll('.grid .font-semibold.text-gray-900'))
+                .map(function(x) { return safeText(x); })
+                .filter(Boolean);
+
+            var key = (title || '').toLowerCase();
+            if (key && seen[key]) return;
+            if (key) seen[key] = 1;
+
+            var freq = metas.length >= 2 ? metas[1] : '';
+            var dur = metas.length >= 3 ? metas[2] : '';
+            var line = (idx + 1) + '. ' + (title || 'Medicine');
+            if (freq) line += '. ' + freq;
+            if (dur) line += '. For ' + dur;
+            if (instruction) {
+                var shortInst = instruction.split(/\.|\n/)[0].trim();
+                if (shortInst) line += '. ' + shortInst;
+            }
+            parts.push(line);
+        });
+        return parts.join(' ');
+    }
+
+    function explanationPatientText() {
+        // Read only the first short sentence per medicine, without repeating labels
+        var items = Array.prototype.slice.call(document.querySelectorAll('h3.font-semibold.text-sm'));
+        var section = items.find(function(h) { return safeText(h).toLowerCase() === 'medicine explanations'; });
+        var root = section ? section.closest('.space-y-3') : null;
+        if (!root) return '';
+
+        var explBoxes = Array.prototype.slice.call(root.querySelectorAll('.border.border-gray-100.rounded-md.p-3'));
+        if (!explBoxes.length) return '';
+
+        var parts = [];
+        parts.push('Key explanations.');
+        var seen = {};
+        explBoxes.forEach(function(box) {
+            var name = safeText(box.querySelector('p.font-semibold'));
+            var expl = safeText(box.querySelector('p.text-xs.text-gray-700'));
+            if (!expl) return;
+            var key = (name || '').toLowerCase();
+            if (key && seen[key]) return;
+            if (key) seen[key] = 1;
+            var first = expl.split(/\.|\n/)[0].trim();
+            if (!first) return;
+            parts.push((name ? (name + '. ') : '') + first);
+        });
+        return parts.join(' ');
+    }
+
+    function translitPatientText() {
+        var el = document.getElementById('tts-translit-text');
+        var full = safeText(el);
+        if (!full) return '';
+
+        // Prefer speaking only the medicines section when the text is formatted as PATIENT/DOCTOR/MEDICINES
+        var idx = full.toUpperCase().indexOf('MEDICINES:');
+        if (idx >= 0) {
+            full = full.slice(idx + 'MEDICINES:'.length).trim();
+        }
+
+        // Keep speech short so it doesn't ramble
+        if (full.length > 900) {
+            full = full.slice(0, 900).trim() + ' ...';
+        }
+        return full;
+    }
+
+    function patientSummaryText(mode) {
+        var cards = Array.prototype.slice.call(document.querySelectorAll('.medicine-card .medicine-view'));
+        if (!cards.length) return '';
+        var parts = [];
+        if (mode === 'english') {
+            parts.push('Prescription summary.');
+        } else {
+            parts.push('Aapki prescription ka summary.');
+        }
+
+        function splitSentences(text) {
+            if (!text) return [];
+            return String(text)
+                .replace(/\s+/g, ' ')
+                .split(/[\.!?]+/)
+                .map(function(s) { return (s || '').trim(); })
+                .filter(function(s) { return s && s.length >= 4; });
+        }
+
+        function extractPrecautions(text) {
+            var sents = splitSentences(text);
+            if (!sents.length) return [];
+            var keys = [
+                'avoid', 'do not', "don't", 'caution', 'warning', 'precaution',
+                'side effect', 'side effects', 'drowsy', 'sleep', 'drive',
+                'alcohol', 'pregnan', 'breast', 'kidney', 'liver', 'stomach',
+                'food', 'after food', 'before food', 'empty stomach',
+                'allergy', 'rash', 'vomit', 'vomiting', 'dizziness', 'bleeding',
+                'complete the course', 'finish the course', 'miss a dose'
+            ];
+            return sents.filter(function(s) {
+                var t = s.toLowerCase();
+                return keys.some(function(k) { return t.indexOf(k) >= 0; });
+            });
+        }
+
+        // Build a map of short explanations by medicine name (scoped to Medicine Explanations section)
+        var explMap = {};
+        try {
+            var headers = Array.prototype.slice.call(document.querySelectorAll('h3.font-semibold.text-sm'));
+            var h = headers.find(function(x) { return safeText(x).toLowerCase() === 'medicine explanations'; });
+            var root = h ? h.closest('.space-y-3') : null;
+            if (root) {
+                var explBoxes = Array.prototype.slice.call(root.querySelectorAll('.border.border-gray-100.rounded-md.p-3'));
+                explBoxes.forEach(function(box) {
+                    var name = safeText(box.querySelector('p.font-semibold'));
+                    var expl = safeText(box.querySelector('p.text-xs.text-gray-700'));
+                    if (!name || !expl) return;
+                    var first = expl.split(/\.|\n/)[0].trim();
+                    if (!first) return;
+                    explMap[name.toLowerCase()] = first;
+                });
+            }
+        } catch (e) {
+            explMap = {};
+        }
+
+        var seen = {};
+        var precautionSet = {};
+        var precautions = [];
+        cards.forEach(function(card, idx) {
+            var title = safeText(card.querySelector('p.font-semibold'));
+            var instruction = safeText(card.querySelector('.text-xs.text-gray-600.mt-3'));
+            var metas = Array.prototype.slice.call(card.querySelectorAll('.grid .font-semibold.text-gray-900'))
+                .map(function(x) { return safeText(x); })
+                .filter(Boolean);
+            // metas: dose, frequency, duration
+            var dose = metas.length >= 1 ? metas[0] : '';
+            var freq = metas.length >= 2 ? metas[1] : '';
+            var dur = metas.length >= 3 ? metas[2] : '';
+
+            var key = (title || '').toLowerCase();
+            if (key && seen[key]) return;
+            if (key) seen[key] = 1;
+
+            var line = (idx + 1) + '. ' + (title || (mode === 'english' ? 'Medicine' : 'Medicine'));
+            if (freq) line += '. ' + freq;
+            if (dur) line += (mode === 'english' ? '. For ' : '. Duration ') + dur;
+            // Keep dose only if it looks meaningful (avoid reading empty/placeholder)
+            if (dose && dose !== '—') line += (mode === 'english' ? '. Dose ' : '. Dose ') + dose;
+            if (instruction) {
+                var shortInst = instruction.split(/\.|\n/)[0].trim();
+                if (shortInst) line += '. ' + shortInst;
+            }
+
+            // Collect precautions from full instruction text (not only the first line)
+            extractPrecautions(instruction).forEach(function(p) {
+                var k = p.toLowerCase();
+                if (!precautionSet[k]) {
+                    precautionSet[k] = 1;
+                    precautions.push(p);
+                }
+            });
+
+            // Append ONE short explanation only if it adds new info (not repeating instruction)
+            if (title) {
+                var expl = explMap[title.toLowerCase()];
+                if (expl) {
+                    var instFirst = instruction ? instruction.split(/\.|\n/)[0].trim().toLowerCase() : '';
+                    var explLower = expl.toLowerCase();
+                    if (!instFirst || (explLower && instFirst && explLower !== instFirst && explLower.indexOf(instFirst) === -1)) {
+                        line += '. ' + expl;
+                    }
+
+                    // Collect precautions from explanation sentence
+                    extractPrecautions(expl).forEach(function(p) {
+                        var k = p.toLowerCase();
+                        if (!precautionSet[k]) {
+                            precautionSet[k] = 1;
+                            precautions.push(p);
+                        }
+                    });
+                }
+            }
+            parts.push(line);
+        });
+
+        if (precautions.length) {
+            // Keep it short and patient-friendly
+            if (mode === 'english') {
+                parts.push('Key precautions. ' + precautions.slice(0, 5).join('. ') + '.');
+            } else {
+                parts.push('Key precautions aur dhyaan rakhne wali baatein. ' + precautions.slice(0, 5).join('. ') + '.');
+            }
+        }
+
+        return parts.join(' ');
+    }
+
+    function explanationsToText() {
+        var items = Array.prototype.slice.call(document.querySelectorAll('h3.font-semibold.text-sm'));
+        var section = items.find(function(h) { return safeText(h).toLowerCase() === 'medicine explanations'; });
+        var root = section ? section.closest('.space-y-3') : null;
+        if (!root) {
+            root = document;
+        }
+        var explBoxes = Array.prototype.slice.call(root.querySelectorAll('.border.border-gray-100.rounded-md.p-3'));
+        if (!explBoxes.length) return '';
+        var parts = [];
+        explBoxes.forEach(function(box, idx) {
+            var name = safeText(box.querySelector('p.font-semibold'));
+            var expl = safeText(box.querySelector('p.text-xs.text-gray-700'));
+            if (!expl) return;
+            parts.push('Explanation ' + (idx + 1) + ' for ' + (name || 'medicine') + ': ' + expl);
+        });
+        return parts.join('. ');
+    }
+
+    function bind(btnSpeakId, btnStopId, voiceSelId, rateSelId, getTextFn) {
+        var speakBtn = document.getElementById(btnSpeakId);
+        var stopBtn = document.getElementById(btnStopId);
+        var voiceSel = document.getElementById(voiceSelId);
+        var rateSel = document.getElementById(rateSelId);
+        if (speakBtn) {
+            speakBtn.addEventListener('click', function() {
+                var text = getTextFn();
+                speak(text, voiceSel ? voiceSel.value : '', rateSel ? rateSel.value : '1');
+            });
+        }
+        if (stopBtn) {
+            stopBtn.addEventListener('click', function() { stop(); });
+        }
+    }
+
+    if (!('speechSynthesis' in window)) {
+        return;
+    }
+
+    fillAllVoiceSelects();
+    pickHindiVoice(document.getElementById('tts-translit-voice'));
+    pickHindiVoice(document.getElementById('tts-structured-voice'));
+    pickHindiVoice(document.getElementById('tts-explain-voice'));
+    pickPreferredVoice(document.getElementById('tts-all-voice'), (document.getElementById('tts-all-lang') || {}).value || 'hinglish');
+    try {
+        window.speechSynthesis.onvoiceschanged = function() {
+            fillAllVoiceSelects();
+            pickHindiVoice(document.getElementById('tts-translit-voice'));
+            pickHindiVoice(document.getElementById('tts-structured-voice'));
+            pickHindiVoice(document.getElementById('tts-explain-voice'));
+            pickPreferredVoice(document.getElementById('tts-all-voice'), (document.getElementById('tts-all-lang') || {}).value || 'hinglish');
+        };
+    } catch (e) {}
+
+    bind(
+        'tts-translit-speak',
+        'tts-translit-stop',
+        'tts-translit-voice',
+        'tts-translit-rate',
+        translitPatientText
+    );
+    bind(
+        'tts-structured-speak',
+        'tts-structured-stop',
+        'tts-structured-voice',
+        'tts-structured-rate',
+        structuredPatientText
+    );
+    bind(
+        'tts-explain-speak',
+        'tts-explain-stop',
+        'tts-explain-voice',
+        'tts-explain-rate',
+        explanationPatientText
+    );
+
+    (function() {
+        var playBtn = document.getElementById('tts-all-play');
+        var pauseBtn = document.getElementById('tts-all-pause');
+        var stopBtn = document.getElementById('tts-all-stop');
+        var langSel = document.getElementById('tts-all-lang');
+        var voiceSel = document.getElementById('tts-all-voice');
+        var rateSel = document.getElementById('tts-all-rate');
+        if (langSel) {
+            langSel.addEventListener('change', function() {
+                if (voiceSel) {
+                    voiceSel.value = '';
+                    pickPreferredVoice(voiceSel, langSel.value || 'hinglish');
+                }
+            });
+        }
+        if (playBtn) {
+            playBtn.addEventListener('click', function() {
+                try {
+                    if (window.speechSynthesis && window.speechSynthesis.paused) {
+                        resume();
+                        return;
+                    }
+                } catch (e) {}
+                var mode = (langSel && langSel.value) ? langSel.value : 'hinglish';
+                var txt = patientSummaryText(mode);
+                speak(txt, voiceSel ? voiceSel.value : '', rateSel ? rateSel.value : '1');
+            });
+        }
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', function() {
+                pause();
+            });
+        }
+        if (stopBtn) {
+            stopBtn.addEventListener('click', function() {
+                stop();
+            });
+        }
+    })();
 })();
 
 (function() {

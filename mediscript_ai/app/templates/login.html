@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="relative" style="min-height:100vh; z-index: 1;">
+    <div class="absolute -top-24 -right-24 w-[560px] h-[560px] rounded-full" aria-hidden="true" style="background: radial-gradient(circle at 30% 30%, rgba(26,188,156,0.10), rgba(72,201,176,0.05) 42%, rgba(209,242,235,0) 70%); filter: blur(20px); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);"></div>
+
+    <div class="relative dash-shell" style="padding-top: 32px; padding-bottom: 32px;">
+        <div class="max-w-xl mx-auto">
+            <div class="text-center">
+                <div class="inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide" style="background:#D1F2EB;color:#1ABC9C;">Prototype Access</div>
+                <h1 class="mt-5 text-3xl sm:text-4xl font-extrabold text-gray-900" style="letter-spacing:-0.02em;">Sign in to continue</h1>
+                <p class="mt-2 text-sm text-gray-600">Enter sample details to proceed to the dashboard.</p>
+                <div class="mt-3 text-xs text-gray-500">
+                    <div><span class="font-semibold text-gray-700">Sample:</span> anantrai0809@gmail.com</div>
+                    <div><span class="font-semibold text-gray-700">Password:</span> Anantrai</div>
+                </div>
+            </div>
+
+            <div class="mt-8 rounded-[22px] border" style="border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.75); box-shadow: 0 24px 64px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+                <form action="/login" method="post" class="p-6 sm:p-8 space-y-4">
+                    {% if error %}
+                        <div class="rounded-xl border p-3 text-sm" style="border-color: rgba(220,38,38,0.25); background: rgba(220,38,38,0.06); color: rgb(185,28,28);">
+                            {{ error }}
+                        </div>
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email" value="{{ email or '' }}" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" style="border-color: #E5E7EB; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);" placeholder="you@example.com" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Password</label>
+                        <input type="password" name="password" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" style="border-color: #E5E7EB; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);" placeholder="••••••••" required>
+                    </div>
+
+                    <button type="submit" class="w-full px-4 py-3 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg" style="background:#1ABC9C;">
+                        Continue
+                    </button>
+
+                    <div class="text-center text-xs text-gray-500 pt-1">
+                        <div>
+                            New here?
+                            <a href="/signup" class="font-semibold" style="color:#1ABC9C;">Create an account</a>
+                        </div>
+                        <div class="mt-2">
+                            <a href="/" class="font-semibold" style="color:#1ABC9C;">Back to landing</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

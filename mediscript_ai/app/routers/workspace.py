@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from typing import Any
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from app.services.gemma_service import (
     call_gemma_explain_medicine,
     call_gemma_extract_patient_doctor,
 )
+from app.services.correction_service import correct_medicines_batch
 from app.services.validation_service import validate_medicines
 from app.utils import format_frequency
 
@@ -30,6 +32,7 @@ router = APIRouter(prefix="/workspace", tags=["workspace"])
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 templates.env.filters["format_frequency"] = format_frequency
+logger = logging.getLogger(__name__)
 
 PATIENT_KEYS = ["name", "age", "gender", "address", "phone", "disease_or_condition", "medicines_summary", "other"]
 DOCTOR_KEYS = ["name", "qualification", "specialization", "clinic_hospital", "address", "phone", "other"]
@@ -43,8 +46,12 @@ async def _run_all_extractions_core(prescription_id: int, db: Session) -> None:
     extraction = await call_gemma(prescription.raw_text)
     gemma_meds = extraction.medicines or []
 
+    # ✅ CORRECTION LAYER: Fix spelling, complete missing data, normalize formats
+    logger.info(f"Correcting {len(gemma_meds)} extracted medicines")
+    corrected_meds = await correct_medicines_batch(gemma_meds)
+    
     validated, final_conf = validate_medicines(
-        gemma_medicines=[GemmaMedicine(**m.dict()) for m in gemma_meds],
+        gemma_medicines=[GemmaMedicine(**m.dict()) for m in corrected_meds],
         ocr_reliability=prescription.confidence_score / 100.0,
         json_parse_success=extraction.json_parse_success,
     )
@@ -200,8 +207,12 @@ async def run_extraction(
     extraction = await call_gemma(prescription.raw_text)
     gemma_meds = extraction.medicines or []
 
+    # ✅ CORRECTION LAYER: Fix spelling, complete missing data, normalize formats
+    logger.info(f"Correcting {len(gemma_meds)} extracted medicines")
+    corrected_meds = await correct_medicines_batch(gemma_meds)
+
     validated, final_conf = validate_medicines(
-        gemma_medicines=[GemmaMedicine(**m.dict()) for m in gemma_meds],
+        gemma_medicines=[GemmaMedicine(**m.dict()) for m in corrected_meds],
         ocr_reliability=prescription.confidence_score / 100.0,
         json_parse_success=extraction.json_parse_success,
     )
