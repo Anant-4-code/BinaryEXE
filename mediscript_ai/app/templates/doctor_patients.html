@@ -1,0 +1,124 @@
+{% extends "doctor_base.html" %}
+{% set active_nav = "patients" %}
+{% set page_title = "Patients" %}
+
+{% block doctor_content %}
+<style>
+.patients-toolbar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+}
+.search-wrap {
+  position: relative; flex: 1; max-width: 360px;
+}
+.search-wrap input {
+  width: 100%; height: 38px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 0 12px 0 38px;
+  font-size: 13px; color: var(--text);
+  font-family: 'Inter', sans-serif; outline: none; transition: all 160ms ease;
+}
+.search-wrap input::placeholder { color: var(--text-dim); }
+.search-wrap input:focus { border-color: var(--primary); background: rgba(0,212,170,0.04); }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
+
+.patients-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+}
+.patient-card {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px; padding: 20px;
+  transition: all 220ms ease; text-decoration: none; color: var(--text); display: block;
+}
+.patient-card:hover { border-color: rgba(0,212,170,0.2); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,0.25); }
+
+.patient-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.patient-avatar {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), #00a37d);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: #0f1117; flex-shrink: 0;
+  letter-spacing: -0.03em;
+}
+.patient-name  { font-size: 15px; font-weight: 700; color: var(--text); }
+.patient-id    { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); margin-top: 2px; }
+
+.patient-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.patient-meta-item {}
+.patient-meta-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+.patient-meta-value { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+.patient-card-footer {
+  display: flex; gap: 8px; padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.empty-state { text-align: center; padding: 80px 32px; color: var(--text-dim); }
+.empty-state svg { margin: 0 auto 16px; display: block; opacity: 0.3; }
+.empty-state p { font-size: 14px; font-weight: 600; }
+</style>
+
+<!-- Toolbar -->
+<div class="patients-toolbar anim-in">
+  <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
+    {{ patients|length if patients else 0 }} Patients
+  </div>
+  <form action="/doctor/patients" method="get" class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" name="q" placeholder="Search patients…" value="{{ query or '' }}" autocomplete="off">
+  </form>
+  <a href="/doctor/create" class="btn btn-primary">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Prescription
+  </a>
+</div>
+
+{% if patients %}
+<div class="patients-grid">
+  {% for p in patients %}
+  <div class="patient-card anim-in">
+    <div class="patient-card-header">
+      <div class="patient-avatar">{{ (p.name or 'P')[0:2]|upper }}</div>
+      <div>
+        <div class="patient-name">{{ p.name }}</div>
+        <div class="patient-id">{{ p.patient_rx_id or 'No ID' }}</div>
+      </div>
+    </div>
+    <div class="patient-meta">
+      <div class="patient-meta-item">
+        <div class="patient-meta-label">Age</div>
+        <div class="patient-meta-value">{{ p.age or '—' }}</div>
+      </div>
+      <div class="patient-meta-item">
+        <div class="patient-meta-label">Gender</div>
+        <div class="patient-meta-value">{{ p.gender or '—' }}</div>
+      </div>
+      <div class="patient-meta-item">
+        <div class="patient-meta-label">Condition</div>
+        <div class="patient-meta-value">{{ (p.disease_or_condition or '—')[:28] }}</div>
+      </div>
+      <div class="patient-meta-item">
+        <div class="patient-meta-label">Phone</div>
+        <div class="patient-meta-value">{{ p.phone or '—' }}</div>
+      </div>
+    </div>
+    <div class="patient-card-footer">
+      <a href="/doctor/patient/{{ p.id }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+      <a href="/doctor/create?patient_id={{ p.id }}" class="btn btn-success btn-sm" style="flex:1;justify-content:center;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        New Rx
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state anim-in">
+  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  <p>{{ 'No results for "' + query + '"' if query else 'No patients registered yet' }}</p>
+  <p style="font-size:12px;margin-top:6px;font-weight:400;">Patients appear here once registered at the reception desk.</p>
+</div>
+{% endif %}
+{% endblock %}

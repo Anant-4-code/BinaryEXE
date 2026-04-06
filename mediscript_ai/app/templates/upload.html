@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% set active_nav = "upload" %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        'aura': {
+          primary: '#00d4aa',
+          secondary: '#00b890',
+          surface: '#0f1117',
+          'surface-container-lowest': '#1c2235',
+          'on-surface': '#ffffff',
+          'on-surface-variant': '#8892a4',
+        }
+      }
+    }
+  }
+};
+</script>
+<style>
+html, body {
+  background-color: var(--aura-surface, #0f1117) !important;
+}
+
+.upload-page {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: white;
+  min-height: calc(100vh - 58px);
+  padding-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upload-card {
+  width: 100%;
+  max-width: 42rem;
+  background: rgba(28, 34, 53, 0.5); /* surface-container-lowest */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dropzone {
+  border: 2px dashed rgba(0, 212, 170, 0.4);
+  border-radius: 8px;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255,255,255,0.01),
+    rgba(255,255,255,0.01) 10px,
+    rgba(255,255,255,0.02) 10px,
+    rgba(255,255,255,0.02) 20px
+  );
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.dropzone:hover, .dropzone.dragover {
+  border-color: #00d4aa;
+  background-color: rgba(0, 212, 170, 0.03);
+  transform: scale(1.02);
+}
+
+#file-preview-container {
+  display: none;
+  margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.5);
+  position: relative;
+}
+#file-preview {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+/* Camera Overlay */
+#camera-container {
+  display: none;
+  margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #000;
+  position: relative;
+}
+#camera-video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-page px-4">
+  
+  <div class="text-center mb-8">
+    <h1 class="text-4xl font-black text-white tracking-tight mb-3">Upload Clinical Document</h1>
+    <p class="text-aura-on-surface-variant max-w-xl mx-auto">Digitize your medical prescription instantly. Our AI will extract your medicines, analyze interactions, and schedule dosing reminders automatically.</p>
+  </div>
+
+  <div class="upload-card shadow-xl max-w-2xl w-full">
+    <form action="/upload" method="POST" enctype="multipart/form-data" id="upload-form">
+      <input type="file" name="file" id="file-input" class="hidden" accept="image/*">
+      
+      <div class="flex gap-3 mb-4">
+        <button type="button" onclick="document.getElementById('file-input').click()" class="flex-1 btn btn-ghost py-3 flex items-center justify-center gap-2">
+           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+           Upload File
+        </button>
+        <button type="button" id="camera-btn" onclick="startCamera()" class="flex-1 btn btn-ghost py-3 flex items-center justify-center gap-2">
+           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+           Take Photo
+        </button>
+      </div>
+
+      <div id="dropzone" class="dropzone" onclick="document.getElementById('file-input').click()">
+        <div class="w-16 h-16 bg-aura-primary/10 rounded-full flex items-center justify-center mb-3 border border-aura-primary/30">
+          <svg class="w-8 h-8 text-aura-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </div>
+        <h2 class="text-lg font-bold text-white mb-1">Drag & Drop prescription here</h2>
+        <p class="text-xs text-aura-on-surface-variant">PNG, JPG or JPEG up to 10MB</p>
+      </div>
+
+      <div id="camera-container">
+        <video id="camera-video" autoplay playsinline></video>
+        <div class="absolute bottom-4 inset-x-0 flex justify-center gap-4">
+           <button type="button" onclick="captureSnapshot()" class="btn btn-primary rounded-full w-14 h-14 flex items-center justify-center shadow-lg">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+           </button>
+           <button type="button" onclick="stopCamera()" class="btn btn-ghost rounded-full w-14 h-14 flex items-center justify-center bg-black/40 backdrop-blur-md">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+           </button>
+        </div>
+      </div>
+
+      <div id="file-preview-container">
+        <img id="file-preview" src="#" alt="Selected Image Preview" />
+        <button type="button" onclick="clearSelection(event)" class="absolute top-2 right-2 bg-black/60 hover:bg-red-500/80 text-white p-2 rounded-full transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <button type="submit" class="btn btn-primary mt-5" id="submit-btn" disabled style="opacity: 0.5; cursor: not-allowed; width: 100%; justify-content: center; padding: 14px 28px; font-size: 16px;">
+        Process Prescription
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('file-input');
+  const previewContainer = document.getElementById('file-preview-container');
+  const filePreview = document.getElementById('file-preview');
+  const submitBtn = document.getElementById('submit-btn');
+  const cameraContainer = document.getElementById('camera-container');
+  const cameraVideo = document.getElementById('camera-video');
+  
+  let cameraStream = null;
+
+  async function startCamera() {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      cameraVideo.srcObject = cameraStream;
+      dropzone.style.display = 'none';
+      previewContainer.style.display = 'none';
+      cameraContainer.style.display = 'block';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+    } catch (err) {
+      alert("Could not access camera: " + err.message);
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+    cameraContainer.style.display = 'none';
+    if (!filePreview.src.includes('#')) {
+       previewContainer.style.display = 'block';
+    } else {
+       dropzone.style.display = 'flex';
+    }
+  }
+
+  function captureSnapshot() {
+    const canvas = document.createElement('canvas');
+    canvas.width = cameraVideo.videoWidth;
+    canvas.height = cameraVideo.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(cameraVideo, 0, 0);
+    
+    canvas.toBlob((blob) => {
+      const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      fileInput.files = dataTransfer.files;
+      
+      handleFiles(fileInput.files);
+      stopCamera();
+    }, 'image/jpeg', 0.95);
+  }
+
+  function handleFiles(files) {
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          filePreview.src = e.target.result;
+          dropzone.style.display = 'none';
+          cameraContainer.style.display = 'none';
+          previewContainer.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+          submitBtn.style.cursor = 'pointer';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }
+
+  function clearSelection(event) {
+    event.stopPropagation();
+    fileInput.value = '';
+    filePreview.src = '#';
+    dropzone.style.display = 'flex';
+    previewContainer.style.display = 'none';
+    cameraContainer.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.5';
+    submitBtn.style.cursor = 'not-allowed';
+  }
+
+  fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    fileInput.files = files; // Assign to input
+    handleFiles(files);
+  });
+</script>
+{% endblock %}

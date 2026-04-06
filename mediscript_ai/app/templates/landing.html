@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+/* Override base nav for landing — no auth links needed */
+.nav-links { display: none; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(var(--nav-h) + 60px) 32px 80px;
+  position: relative; overflow: hidden;
+  text-align: center;
+}
+
+/* Ambient glow */
+.hero::before {
+  content: '';
+  position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(0,212,170,0.08) 0%, transparent 65%);
+  border-radius: 50%; pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: -100px; right: -100px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,212,170,0.05) 0%, transparent 65%);
+  border-radius: 50%; pointer-events: none;
+}
+
+.hero-inner { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; }
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2);
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 28px;
+}
+.hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(1.4);} }
+
+.hero-title {
+  font-size: clamp(40px, 6vw, 68px);
+  font-weight: 900; line-height: 1.07; letter-spacing: -0.04em;
+  color: var(--text); margin-bottom: 22px;
+}
+.hero-title .accent { color: var(--primary); }
+
+.hero-sub {
+  font-size: 17px; color: var(--text-muted); line-height: 1.7;
+  max-width: 560px; margin: 0 auto 40px; font-weight: 400;
+}
+
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.btn-hero-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 32px; border-radius: 10px;
+  background: var(--primary); color: #0f1117;
+  font-size: 14px; font-weight: 800; text-decoration: none;
+  transition: all 220ms ease; letter-spacing: -0.01em;
+}
+.btn-hero-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,212,170,0.25); }
+.btn-hero-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: 10px;
+  background: transparent; color: var(--text);
+  font-size: 14px; font-weight: 600; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: all 220ms ease;
+}
+.btn-hero-secondary:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.22); }
+
+/* ── TRUST BAR ── */
+.trust-bar {
+  background: var(--bg-elevated); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 20px 32px;
+}
+.trust-bar-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: center; gap: 48px;
+  flex-wrap: wrap;
+}
+.trust-stat { text-align: center; }
+.trust-stat-num { font-size: 26px; font-weight: 900; color: var(--primary); letter-spacing: -0.04em; font-family: 'JetBrains Mono', monospace; }
+.trust-stat-label { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.trust-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.07); }
+
+/* ── FEATURES SECTION ── */
+.features { padding: 96px 32px; }
+.features-inner { max-width: 1200px; margin: 0 auto; }
+
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 800; color: var(--primary);
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 16px;
+}
+.section-label::before { content:''; width:20px; height:1px; background:var(--primary); }
+.section-heading { font-size: clamp(28px,4vw,40px); font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin-bottom: 56px; }
+
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.feature-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 16px; padding: 28px;
+  transition: all 220ms ease; position: relative; overflow: hidden;
+}
+.feature-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  opacity: 0; transition: opacity 220ms ease;
+}
+.feature-card:hover { border-color: rgba(0,212,170,0.2); transform: translateY(-3px); }
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--primary-dim); border: 1px solid rgba(0,212,170,0.15);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px; color: var(--primary);
+}
+.feature-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.feature-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+/* ── HOW IT WORKS ── */
+.how-it-works {
+  padding: 96px 32px;
+  background: var(--bg-elevated);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.how-inner { max-width: 1200px; margin: 0 auto; }
+
+.steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 48px; }
+.step-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 16px; padding: 24px; text-align: center;
+}
+.step-num {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--primary); color: #0f1117;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 900; margin: 0 auto 16px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.step-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+/* ── ROLE CARDS ── */
+.roles-section { padding: 96px 32px; }
+.roles-inner { max-width: 1200px; margin: 0 auto; }
+.roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+
+.role-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 20px; padding: 36px 28px;
+  text-decoration: none; color: var(--text);
+  transition: all 260ms ease; position: relative; overflow: hidden;
+  display: block;
+}
+.role-card::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(0,212,170,0.06) 0%, transparent 60%);
+  opacity: 0; transition: opacity 260ms ease;
+}
+.role-card:hover { border-color: rgba(0,212,170,0.25); transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.35); }
+.role-card:hover::before { opacity: 1; }
+
+.role-icon {
+  width: 56px; height: 56px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; margin-bottom: 20px;
+}
+.role-icon-patient  { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.2); }
+.role-icon-doctor   { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); }
+.role-icon-receptionist { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2); }
+
+.role-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; letter-spacing: -0.02em; }
+.role-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-bottom: 20px; }
+.role-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--primary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* ── CTA SECTION ── */
+.cta-section {
+  padding: 100px 32px;
+  background: linear-gradient(135deg, #0d1420 0%, #101a15 100%);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.cta-inner { max-width: 680px; margin: 0 auto; text-align: center; }
+.cta-title { font-size: clamp(28px,4vw,44px); font-weight: 900; letter-spacing: -0.04em; color: var(--text); margin-bottom: 16px; }
+.cta-sub { font-size: 15px; color: var(--text-muted); margin-bottom: 36px; line-height: 1.65; }
+
+/* ── FOOTER ── */
+.footer {
+  background: var(--bg-elevated); border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 24px 32px; text-align: center;
+}
+.footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.footer-brand { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.footer-brand span { color: var(--primary); }
+.footer-note { font-size: 12px; color: var(--text-dim); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      AI-Powered Clinical Intelligence
+    </div>
+
+    <h1 class="hero-title">
+      Smarter Prescriptions.<br>
+      <span class="accent">Healthier Lives.</span>
+    </h1>
+
+    <p class="hero-sub">
+      Sanjeevani AI digitizes paper prescriptions, extracts medicines with AI precision,
+      tracks medication adherence, and empowers clinicians with real-time insights.
+    </p>
+
+    <div class="hero-actions">
+      <a href="/login" class="btn-hero-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Get Started
+      </a>
+      <a href="/role-login" class="btn-hero-secondary">
+        Choose Your Role
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ TRUST BAR ═══════════════════ -->
+<div class="trust-bar">
+  <div class="trust-bar-inner">
+    <div class="trust-stat">
+      <div class="trust-stat-num">10K+</div>
+      <div class="trust-stat-label">Prescriptions Processed</div>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-stat">
+      <div class="trust-stat-num">98.4%</div>
+      <div class="trust-stat-label">OCR Accuracy</div>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-stat">
+      <div class="trust-stat-num">12+</div>
+      <div class="trust-stat-label">Languages Supported</div>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-stat">
+      <div class="trust-stat-num">500+</div>
+      <div class="trust-stat-label">Doctors Active</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ FEATURES ═══════════════════ -->
+<section class="features">
+  <div class="features-inner">
+    <div class="section-label">Core Capabilities</div>
+    <div class="section-heading">Everything you need for digital prescriptions</div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="feature-title">OCR Prescription Digitization</div>
+        <div class="feature-desc">Upload any paper prescription — handwritten or printed. Our engine converts it to structured, editable data with 98%+ accuracy.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="feature-title">AI Medicine Extraction</div>
+        <div class="feature-desc">LLM-powered extraction of drug names, dosages, frequencies, and durations. Automatically corrects OCR errors using medical knowledge bases.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="feature-title">Smart Dose Scheduling</div>
+        <div class="feature-desc">Auto-generates dose calendars from prescription frequencies (BD, TDS, PRN). Time-aware scheduling with missed dose detection.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <div class="feature-title">Real-Time Reminders</div>
+        <div class="feature-desc">Intelligent notification system for upcoming, missed, and completed doses. Configurable reminder windows per medication.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <div class="feature-title">Adherence Analytics</div>
+        <div class="feature-desc">Visual dashboards tracking medication compliance. Adherence percentage, trend analysis, and weekly/monthly patterns.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div class="feature-title">12+ Language Support</div>
+        <div class="feature-desc">Transliterate prescriptions to Hindi, Tamil, Telugu, Kannada, and more — in native script. Audio readout in Hinglish for accessibility.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
+<section class="how-it-works">
+  <div class="how-inner">
+    <div class="section-label">Workflow</div>
+    <div class="section-heading">From paper to digital in seconds</div>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-title">Upload Prescription</div>
+        <div class="step-desc">Photograph or scan any prescription. Supports JPEG, PNG, and PDF formats.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-title">AI Extraction</div>
+        <div class="step-desc">OCR + LLM pipeline identifies every medicine, dosage, frequency, and patient detail.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-title">Doctor Review</div>
+        <div class="step-desc">Clinician verifies, edits, or rejects AI-extracted data before it reaches the patient.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-title">Track & Adhere</div>
+        <div class="step-desc">Patient receives scheduled reminders and logs doses. Analytics track compliance automatically.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ ROLE CARDS ═══════════════════ -->
+<section class="roles-section">
+  <div class="roles-inner">
+    <div class="section-label">Access Portals</div>
+    <div class="section-heading">Choose your workspace</div>
+
+    <div class="roles-grid">
+      <a href="/login" class="role-card">
+        <div class="role-icon role-icon-patient">🩺</div>
+        <div class="role-title">Patient Portal</div>
+        <div class="role-desc">View your prescriptions, track medication schedules, receive reminders, and monitor your adherence history.</div>
+        <div class="role-cta">Enter Portal <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </a>
+
+      <a href="/doctor/queue" class="role-card">
+        <div class="role-icon role-icon-doctor">⚕️</div>
+        <div class="role-title">Doctor Panel</div>
+        <div class="role-desc">Manage patient queues, review AI-extracted prescriptions, create new Rx, and analyze patient adherence data.</div>
+        <div class="role-cta">Enter Panel <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </a>
+
+      <a href="/receptionist" class="role-card">
+        <div class="role-icon role-icon-receptionist">🏥</div>
+        <div class="role-title">Reception Desk</div>
+        <div class="role-desc">Register new patients, manage appointment queues, and coordinate between patients and clinical staff efficiently.</div>
+        <div class="role-cta">Enter Desk <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ CTA ═══════════════════ -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <h2 class="cta-title">Ready to digitize your clinic?</h2>
+    <p class="cta-sub">Join thousands of healthcare providers who trust Sanjeevani AI to manage prescriptions and improve patient outcomes.</p>
+    <div class="hero-actions">
+      <a href="/signup" class="btn-hero-primary">
+        Create Account
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="/login" class="btn-hero-secondary">Sign In</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">SANJI<span>VANI</span> AI</div>
+    <div class="footer-note">© 2026 Sanjeevani AI. Intelligent Prescription Management.</div>
+    <div class="footer-note">MIT License</div>
+  </div>
+</footer>
+
+{% endblock %}

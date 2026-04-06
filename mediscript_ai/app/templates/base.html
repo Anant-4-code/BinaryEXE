@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Sanjeevani AI" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0f1117;
+      --bg-elevated:   #161b27;
+      --card:          #1c2235;
+      --card-border:   rgba(255,255,255,0.07);
+      --primary:       #00d4aa;
+      --primary-dark:  #00b890;
+      --primary-glow:  rgba(0,212,170,0.15);
+      --primary-dim:   rgba(0,212,170,0.08);
+      --text:          #ffffff;
+      --text-muted:    #8892a4;
+      --text-dim:      #4e5d6e;
+      --nav-h:         58px;
+      --radius:        6px;
+      --radius-sm:     4px;
+
+      /* Aqua variants for the global loader system */
+      --aqua-1: #1abc9c;
+      --aqua-2: #48c9b0;
+      --aqua-3: #16a085;
+      --aqua-4: #d1f2eb;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── TOP NAV ── */
+    .top-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+      height: var(--nav-h);
+      background: rgba(15,17,23,0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center;
+    }
+    .nav-inner {
+      width: 100%; max-width: 1400px;
+      margin: 0 auto; padding: 0 32px;
+      display: flex; align-items: center; gap: 32px;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; flex-shrink: 0;
+    }
+    .nav-brand-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-brand-text { font-size: 13px; font-weight: 800; color: var(--text); letter-spacing: 0.04em; }
+
+    .nav-links { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .nav-link {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500;
+      color: var(--text-muted); text-decoration: none;
+      transition: all 180ms ease; white-space: nowrap;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .nav-link.active { color: var(--primary); background: var(--primary-dim); }
+
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .nav-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #00a37d);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #0f1117; cursor: pointer;
+    }
+
+    /* ── PAGE CONTENT ── */
+    .page-content {
+      margin-top: var(--nav-h);
+      min-height: calc(100vh - var(--nav-h));
+    }
+
+    /* Shared styles used by workspace.html and other patient-facing pages */
+    .container-xl { max-width: 1300px; margin: 0 auto; padding: 28px 32px; }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .sb-pending, .sb-draft      { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+    .sb-processing              { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+    .sb-needs_review, .sb-review { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+    .sb-verified                { background: rgba(0,212,170,0.12); color: var(--primary); border: 1px solid rgba(0,212,170,0.25); }
+    .sb-rejected                { background: rgba(240,82,82,0.12); color: #f87171; border: 1px solid rgba(240,82,82,0.25); }
+
+    /* Button Standards */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; text-decoration: none; transition: all 160ms ease;
+      white-space: nowrap;
+    }
+    .btn-primary  { background: var(--primary); color: #0f1117; font-weight: 700; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ghost    { background: transparent; color: var(--text-muted); border: 1px solid rgba(255,255,255,0.08); }
+    .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 20px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; z-index: 9999;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+      transform: translateY(80px); opacity: 0;
+      transition: all 350ms cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none; display: flex; align-items: center; gap: 8px;
+      border: 1px solid;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #064e3b; color: #6ee7b7; border-color: rgba(0,212,170,0.3); }
+    .toast-error   { background: #450a0a; color: #fca5a5; border-color: rgba(240,82,82,0.3); }
+    .toast-info    { background: #0c1a3a; color: #93c5fd; border-color: rgba(59,130,246,0.3); }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+    /* ── GLOBAL BUFFER LOADER (Physics Animation) ── */
+    .global-glass-card{
+        position: relative;
+        background: rgba(255,255,255,0.10);
+        border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        overflow: hidden;
+    }
+
+    .global-glass-card::before{
+        content:"";
+        position:absolute;
+        inset:-60px;
+        background:
+            radial-gradient(closest-side, rgba(26,188,156,0.25), rgba(26,188,156,0) 70%),
+            radial-gradient(closest-side, rgba(72,201,176,0.18), rgba(72,201,176,0) 70%),
+            radial-gradient(closest-side, rgba(209,242,235,0.15), rgba(209,242,235,0) 70%);
+        filter: blur(8px);
+        opacity: 0.98;
+        animation: glassDrift 3.6s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    .global-glass-card > *{ position: relative; z-index: 1; }
+
+    @keyframes glassDrift{
+        0%{ transform: translate3d(-14px,-8px,0) rotate(0deg); }
+        50%{ transform: translate3d(12px,10px,0) rotate(2deg); }
+        100%{ transform: translate3d(-14px,-8px,0) rotate(0deg); }
+    }
+
+    .global-physics-loader{
+        width: 64px;
+        height: 30px;
+        position: relative;
+        filter: drop-shadow(0 10px 18px rgba(15, 118, 110, 0.28));
+    }
+
+    .global-physics-loader .blob{
+        position:absolute;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        transform: translateY(-50%);
+        background: radial-gradient(circle at 30% 30%, var(--aqua-4), var(--aqua-1));
+        box-shadow:
+            inset 0 -2px 6px rgba(15,118,110,0.22),
+            0 6px 16px rgba(26,188,156,0.20);
+        animation: blobSpring 1.1s cubic-bezier(.34,1.56,.64,1) infinite;
+    }
+
+    .global-physics-loader .b1{ left: 0px; animation-delay: 0ms; }
+    .global-physics-loader .b2{ left: 22px; animation-delay: 120ms; background: radial-gradient(circle at 30% 30%, var(--aqua-4), var(--aqua-3)); }
+    .global-physics-loader .b3{ left: 44px; animation-delay: 240ms; background: radial-gradient(circle at 30% 30%, var(--aqua-4), var(--aqua-2)); }
+
+    @keyframes blobSpring{
+        0%{ transform: translateY(-50%) translateY(0px) scale(1,1); filter: blur(0px); }
+        35%{ transform: translateY(-50%) translateY(-10px) scale(1.18,0.86); filter: blur(0px); }
+        65%{ transform: translateY(-50%) translateY(6px) scale(0.92,1.12); filter: blur(0px); }
+        100%{ transform: translateY(-50%) translateY(0px) scale(1,1); filter: blur(0px); }
+    }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- GLOBAL LOADER (Buffering Overlay) -->
+<div id="global-loader" class="fixed inset-0 hidden items-center justify-center" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(2,6,23,0.35); z-index: 99999; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+    <div class="global-glass-card" style="border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 20px 24px; display: flex; align-items: center; gap: 16px;">
+        <div class="global-physics-loader" aria-label="Loading">
+            <span class="blob b1"></span>
+            <span class="blob b2"></span>
+            <span class="blob b3"></span>
+        </div>
+        <div>
+            <div style="font-size: 14px; font-weight: 700; color: #fff;">Buffering</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px;">Please wait…</div>
+        </div>
+    </div>
+</div>
+
+<nav class="top-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f1117" stroke-width="3">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">SANJIVANI</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link {% if active_nav == 'home' %}active{% endif %}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        Home
+      </a>
+      <a href="/upload" class="nav-link {% if active_nav == 'upload' %}active{% endif %}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        Upload Rx
+      </a>
+    </div>
+
+    <div class="nav-right">
+      {% block nav_actions %}{% endblock %}
+      <div class="nav-avatar" title="My Account">
+        {{ user_initials or "U" }}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page-content">
+  {% block content %}{% endblock %}
+</div>
+
+<div id="toastEl" class="toast" role="alert"></div>
+
+<script>
+function showToast(msg, type='success') {
+  const t = document.getElementById('toastEl');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ── GLOBAL BUFFER LOGIC ── */
+(function() {
+    var loader = document.getElementById('global-loader');
+    if (!loader) return;
+
+    var pending = 0;
+    var showTimer = null;
+    var minShowMs = 250;
+    var lastShowAt = 0;
+
+    function _show() {
+        if (pending <= 0) return;
+        if (showTimer) return;
+        showTimer = setTimeout(function() {
+            showTimer = null;
+            if (pending > 0) {
+                lastShowAt = Date.now();
+                loader.style.display = 'flex';
+                loader.classList.remove('hidden');
+                loader.classList.add('flex');
+            }
+        }, 150);
+    }
+
+    function _hide() {
+        if (pending > 0) return;
+        if (showTimer) {
+            clearTimeout(showTimer);
+            showTimer = null;
+        }
+        var elapsed = Date.now() - lastShowAt;
+        var wait = elapsed < minShowMs ? (minShowMs - elapsed) : 0;
+        setTimeout(function() {
+            if (pending === 0) {
+                loader.style.display = 'none';
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+            }
+        }, wait);
+    }
+
+    window.__loaderStart = function() {
+        pending += 1;
+        _show();
+    };
+    window.__loaderEnd = function() {
+        pending = Math.max(0, pending - 1);
+        _hide();
+    };
+
+    var origFetch = window.fetch;
+    if (origFetch) {
+        window.fetch = function() {
+            var url = arguments[0];
+            var isSilent = false;
+            // Background AI tasks or explicit header should not trigger full-page loader
+            if (typeof url === 'string' && (url.includes('/chat') || url.includes('/explain'))) {
+                isSilent = true;
+            }
+            if (arguments[1] && arguments[1].headers && (arguments[1].headers['X-No-Loader'] || arguments[1].headers['x-no-loader'])) {
+                isSilent = true;
+            }
+
+            if (!isSilent) window.__loaderStart();
+            
+            try {
+                return origFetch.apply(this, arguments)
+                    .then(function(resp) {
+                        if (!isSilent) window.__loaderEnd();
+                        return resp;
+                    })
+                    .catch(function(err) {
+                        if (!isSilent) window.__loaderEnd();
+                        throw err;
+                    });
+            } catch (e) {
+                if (!isSilent) window.__loaderEnd();
+                throw e;
+            }
+        };
+    }
+
+    document.addEventListener('submit', function(e) {
+        try {
+            var form = e.target;
+            // Prevent showing loader for dialogs or already captured forms
+            if (!form || (form.getAttribute('method') && form.getAttribute('method').toLowerCase() === 'dialog')) return;
+            window.__loaderStart();
+        } catch (err) {
+            return;
+        }
+    }, true);
+
+    // Initial Load check
+    if (document.readyState !== 'complete') {
+        window.__loaderStart();
+        window.addEventListener('load', function() {
+            setTimeout(window.__loaderEnd, 100);
+        });
+    }
+
+    // Link Navigations
+    document.addEventListener('click', function(e) {
+        var a = e.target.closest('a');
+        if (!a) return;
+        var href = a.getAttribute('href');
+        // Ignore hashes, external targets, etc.
+        if (!href || href.startsWith('#') || href.startsWith('javascript:') || a.getAttribute('target') === '_blank' || a.hasAttribute('download')) return;
+        // Ignore modifier keys (new tab/window)
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        window.__loaderStart();
+    }, true);
+
+    window.addEventListener('beforeunload', function() {
+        window.__loaderStart();
+    });
+
+    window.addEventListener('pageshow', function() {
+        pending = 0;
+        _hide();
+    });
+})();
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

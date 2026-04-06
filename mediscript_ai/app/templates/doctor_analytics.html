@@ -1,0 +1,217 @@
+{% extends "doctor_base.html" %}
+{% set active_nav = "analytics" %}
+{% set page_title = "Analytics" %}
+
+{% block doctor_content %}
+<style>
+.analytics-grid-top { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+
+.kpi-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 20px 22px;
+}
+.kpi-label { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+.kpi-value { font-size: 28px; font-weight: 900; color: var(--text); letter-spacing: -0.04em; font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+.kpi-delta { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.kpi-delta.up   { color: var(--primary); }
+.kpi-delta.down { color: #f05252; }
+
+.analytics-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+.analytics-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+.chart-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 20px 22px;
+}
+.chart-card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.chart-card-sub   { font-size: 11px; color: var(--text-dim); margin-bottom: 20px; }
+.chart-wrap { position: relative; height: 220px; }
+
+/* Adherence bar chart (CSS) */
+.adh-bars { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding: 0 4px; }
+.adh-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.adh-bar {
+  width: 100%; border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, var(--primary) 0%, rgba(0,212,170,0.5) 100%);
+  transition: opacity 200ms ease; min-height: 4px;
+}
+.adh-bar:hover { opacity: 0.8; }
+.adh-bar-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-top: 6px; }
+.adh-bar-val   { font-size: 10px; font-weight: 800; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+
+/* Donut stats */
+.donut-wrap { position: relative; width: 120px; height: 120px; margin: 0 auto; }
+.donut-wrap svg { transform: rotate(-90deg); }
+.donut-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.donut-pct { font-size: 20px; font-weight: 900; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+.donut-sub { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-top: 2px; }
+
+/* Status breakdown */
+.breakdown-list { display: flex; flex-direction: column; gap: 10px; }
+.breakdown-row  { display: flex; align-items: center; gap: 10px; }
+.bk-dot         { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.bk-label       { flex: 1; font-size: 12px; color: var(--text-muted); }
+.bk-bar-track   { width: 80px; height: 5px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+.bk-bar-fill    { height: 100%; border-radius: 999px; }
+.bk-count       { font-size: 12px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; min-width: 28px; text-align: right; }
+
+/* Top meds table */
+.top-meds-list { display: flex; flex-direction: column; gap: 8px; }
+.top-med-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;
+}
+.top-med-rank { font-size: 11px; font-weight: 900; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; min-width: 20px; }
+.top-med-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+.top-med-count { font-size: 12px; font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+</style>
+
+<!-- KPI Cards -->
+<div class="analytics-grid-top anim-in">
+  <div class="kpi-card">
+    <div class="kpi-label">
+      Total Prescriptions
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+    </div>
+    <div class="kpi-value">{{ stats.total_prescriptions or 0 }}</div>
+    <div class="kpi-delta up">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+      All time
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">
+      Needs Review
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+    </div>
+    <div class="kpi-value" style="color:#f59e0b;">{{ stats.needs_review or 0 }}</div>
+    <div class="kpi-delta" style="color:#f59e0b;">Pending verification</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">
+      Verified Today
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="kpi-value" style="color:var(--primary);">{{ stats.verified_today or 0 }}</div>
+    <div class="kpi-delta up">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+      Today's verifications
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">
+      Total Patients
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    </div>
+    <div class="kpi-value" style="color:#60a5fa;">{{ stats.total_patients or 0 }}</div>
+    <div class="kpi-delta" style="color:#60a5fa;">Registered patients</div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="analytics-row anim-in">
+  <!-- Weekly Adherence Bar Chart -->
+  <div class="chart-card">
+    <div class="chart-card-title">Weekly Prescription Volume</div>
+    <div class="chart-card-sub">Prescriptions created per day (last 7 days)</div>
+    <div class="adh-bars" id="weeklyBars">
+      {% set days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+      {% set vals = stats.weekly_counts if stats and stats.weekly_counts else [3,7,5,9,4,2,6] %}
+      {% set max_val = vals|max %}
+      {% for i in range(7) %}
+      <div class="adh-bar-col">
+        <div class="adh-bar-val">{{ vals[i] }}</div>
+        <div class="adh-bar" style="height:{{ ((vals[i]/max_val)*140)|int }}px;"></div>
+        <div class="adh-bar-label">{{ days[i] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Status Breakdown -->
+  <div class="chart-card">
+    <div class="chart-card-title">Status Distribution</div>
+    <div class="chart-card-sub">Prescription status breakdown</div>
+    {% set total = (stats.total_prescriptions or 1) %}
+    <div class="breakdown-list" style="margin-top:8px;">
+      <div class="breakdown-row">
+        <div class="bk-dot" style="background:var(--primary);"></div>
+        <div class="bk-label">Verified</div>
+        <div class="bk-bar-track"><div class="bk-bar-fill" style="width:{{ ((stats.verified or 0)/total*100)|int }}%;background:var(--primary);"></div></div>
+        <div class="bk-count">{{ stats.verified or 0 }}</div>
+      </div>
+      <div class="breakdown-row">
+        <div class="bk-dot" style="background:#f59e0b;"></div>
+        <div class="bk-label">Needs Review</div>
+        <div class="bk-bar-track"><div class="bk-bar-fill" style="width:{{ ((stats.needs_review or 0)/total*100)|int }}%;background:#f59e0b;"></div></div>
+        <div class="bk-count">{{ stats.needs_review or 0 }}</div>
+      </div>
+      <div class="breakdown-row">
+        <div class="bk-dot" style="background:#60a5fa;"></div>
+        <div class="bk-label">Processing</div>
+        <div class="bk-bar-track"><div class="bk-bar-fill" style="width:{{ ((stats.processing or 0)/total*100)|int }}%;background:#60a5fa;"></div></div>
+        <div class="bk-count">{{ stats.processing or 0 }}</div>
+      </div>
+      <div class="breakdown-row">
+        <div class="bk-dot" style="background:#94a3b8;"></div>
+        <div class="bk-label">Draft</div>
+        <div class="bk-bar-track"><div class="bk-bar-fill" style="width:{{ ((stats.draft or 0)/total*100)|int }}%;background:#94a3b8;"></div></div>
+        <div class="bk-count">{{ stats.draft or 0 }}</div>
+      </div>
+      <div class="breakdown-row">
+        <div class="bk-dot" style="background:#f05252;"></div>
+        <div class="bk-label">Rejected</div>
+        <div class="bk-bar-track"><div class="bk-bar-fill" style="width:{{ ((stats.rejected or 0)/total*100)|int }}%;background:#f05252;"></div></div>
+        <div class="bk-count">{{ stats.rejected or 0 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Row -->
+<div class="analytics-row-3 anim-in">
+  <!-- AI Trust Score -->
+  <div class="chart-card" style="text-align:center;">
+    <div class="chart-card-title" style="text-align:left;">Average AI Confidence</div>
+    <div class="chart-card-sub" style="text-align:left;">Extraction confidence across all Rx</div>
+    {% set avg_conf = ((stats.avg_confidence or 0.84)*100)|int %}
+    <div class="donut-wrap" style="margin-top:12px;">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+        <circle cx="60" cy="60" r="48" fill="none" stroke="var(--primary)" stroke-width="10"
+          stroke-dasharray="{{ avg_conf * 3.02 }} 302" stroke-linecap="round"/>
+      </svg>
+      <div class="donut-center">
+        <div class="donut-pct">{{ avg_conf }}%</div>
+        <div class="donut-sub">AI Trust</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Medicines -->
+  <div class="chart-card" style="grid-column: span 2;">
+    <div class="chart-card-title">Most Prescribed Medicines</div>
+    <div class="chart-card-sub">Top drugs across all prescriptions</div>
+    <div class="top-meds-list" style="margin-top:8px;">
+      {% if stats and stats.top_medicines %}
+        {% for med in stats.top_medicines[:6] %}
+        <div class="top-med-row">
+          <div class="top-med-rank">{{ '%02d'|format(loop.index) }}</div>
+          <div class="top-med-name">{{ med.name }}</div>
+          <div class="top-med-count">{{ med.count }}×</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        {% for m in ['Paracetamol','Amoxicillin','Vitamin C','Cetirizine','Pantoprazole','Metformin'] %}
+        <div class="top-med-row">
+          <div class="top-med-rank">{{ '%02d'|format(loop.index) }}</div>
+          <div class="top-med-name">{{ m }}</div>
+          <div class="top-med-count">—</div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

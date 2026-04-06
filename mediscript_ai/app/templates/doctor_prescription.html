@@ -1,0 +1,533 @@
+{% extends "doctor_base.html" %}
+{% set active_nav = "prescriptions" %}
+{% set page_title = prescription.title if prescription else "Prescription Review" %}
+{% set page_badge = prescription.status.replace('_',' ').upper() if prescription else "" %}
+{% set page_badge_class = "badge-review" if prescription and prescription.status == "needs_review" else "badge-active" %}
+
+{% block nav_actions %}
+{% if prescription %}
+<button type="button" onclick="handlePrescriptionAction('verify')" class="nav-action-btn primary-btn">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  VERIFY
+</button>
+<a href="/workspace/{{ prescription.id }}" class="nav-action-btn">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/></svg>
+  EDIT
+</a>
+<button type="button" 
+        onclick="browserReadText(this, this.getAttribute('data-tts-text'))" 
+        class="nav-action-btn"
+        id="tts-review-btn"
+        data-tts-text="Patient Name: {{ patient_details.name or 'Patient' }}. Diagnosis: {{ patient_details.disease_or_condition or 'Review' }}. {% for m in medicines %}Medicine: {{ m.normalized_name or m.original_name }}{% if m.dose %}, Dose: {{ m.dose }}{% endif %}. Explanation: {{ m.explanation }}. {% endfor %}">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+  VOICE REPORT
+</button>
+<a href="/export/{{ prescription.id }}/pdf" class="nav-action-btn">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  EXPORT
+</a>
+{% endif %}
+{% endblock %}
+
+{% block doctor_content %}
+<style>
+.rx-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+
+/* Clinical Summary */
+.rx-summary-card {
+  background: linear-gradient(135deg, rgba(0,212,170,0.06) 0%, rgba(0,212,170,0.02) 100%);
+  border: 1px solid rgba(0,212,170,0.15);
+  border-radius: 16px; padding: 24px 28px; margin-bottom: 20px;
+}
+.rx-card-eyebrow { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+.rx-card-title   { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; margin-bottom: 14px; }
+.rx-summary-text { font-size: 13px; color: var(--text-muted); line-height: 1.75; }
+
+.rx-vitals { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+.rx-vital {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; padding: 10px 14px;
+}
+.rx-vital-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.rx-vital-value { font-size: 15px; font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+
+/* Medicine Cards Grid */
+.meds-section { margin-bottom: 20px; }
+.meds-section-title {
+  font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); font-weight: 500; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+.meds-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+.med-card {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px; padding: 18px 20px;
+  transition: border-color 180ms ease;
+}
+.med-card:hover { border-color: rgba(0,212,170,0.2); }
+
+.med-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.med-name { font-size: 15px; font-weight: 800; color: var(--text); }
+.med-type { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+.med-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.15);
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.med-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.med-detail-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+.med-detail-value { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.med-card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);
+}
+.med-protocol { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 5px; }
+.med-protocol-standard { color: var(--primary); }
+.med-protocol-override  { color: #f59e0b; }
+
+/* Right Panel — Alerts */
+.alerts-panel { display: flex; flex-direction: column; gap: 12px; }
+.alert-card {
+  border-radius: 12px; padding: 14px 16px;
+  border-left: 3px solid;
+}
+.alert-title {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 7px;
+}
+.alert-body { font-size: 12px; line-height: 1.55; color: var(--text-muted); }
+.alert-danger  { background: rgba(240,82,82,0.08); border-color: #f05252; }
+.alert-warning { background: rgba(245,158,11,0.08); border-color: #f59e0b; }
+.alert-success { background: rgba(0,212,170,0.08); border-color: var(--primary); }
+.alert-danger  .alert-title { color: #f05252; }
+.alert-warning .alert-title { color: #f59e0b; }
+.alert-success .alert-title { color: var(--primary); }
+
+/* Patient Info Card */
+.patient-info-card {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 12px;
+}
+.patient-info-title { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.info-row:last-child { border-bottom: none; }
+.info-key { font-size: 11px; color: var(--text-dim); }
+.info-val { font-size: 12px; font-weight: 600; color: var(--text); text-align: right; max-width: 160px; }
+
+/* Trust Score Ring */
+.trust-ring-wrap { background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 20px; text-align: center; }
+.trust-ring-title { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+.trust-ring { position: relative; width: 100px; height: 100px; margin: 0 auto; }
+.trust-ring svg { transform: rotate(-90deg); }
+.trust-ring-num {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 900; color: var(--primary); font-family: 'JetBrains Mono', monospace;
+}
+.trust-ring-sub { font-size: 11px; color: var(--text-dim); margin-top: 10px; }
+
+/* Bottom actions */
+.rx-bottom-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 24px; padding: 18px 22px;
+  background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px;
+}
+.sig-label { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 7px; }
+.sig-val   { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--primary); }
+</style>
+
+{% if not prescription %}
+<div style="text-align:center;padding:80px;">
+  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.5" style="margin:0 auto 16px;display:block;opacity:0.3;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+  <p style="color:var(--text-muted);font-weight:600;">Prescription not found</p>
+  <a href="/doctor/prescriptions" class="btn btn-ghost" style="margin-top:16px;display:inline-flex;">Back to Prescriptions</a>
+</div>
+{% else %}
+<div class="rx-layout anim-in">
+
+  <!-- Left: Main Content -->
+  <div>
+    <!-- Medication Regimen -->
+    <div class="meds-section" style="margin-bottom:28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h2 class="section-title">Medication Regimen</h2>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-glow);padding:4px 10px;border-radius:20px;border:1px solid rgba(0,212,170,0.3);">
+            {{ medicines|length if medicines else 0 }} medicines extracted
+          </span>
+          <button type="button" onclick="toggleElement('add-medicine-form')" class="btn btn-primary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            ADD MEDICINE
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Medicine Form (Hidden by default) -->
+      <div id="add-medicine-form" style="display:none;margin-bottom:24px;background:var(--bg-elevated);border:1px dashed var(--primary);border-radius:14px;padding:24px;" class="anim-in">
+        <form action="/doctor/prescription/{{ prescription.id }}/medicine/add" method="post" style="margin:0;">
+          <h3 style="font-size:12px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Clinical Formulation Entry
+          </h3>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div>
+              <label class="form-label">Medication Name</label>
+              <input type="text" name="name" class="form-input" placeholder="e.g. Amoxicillin 500mg" required>
+            </div>
+            <div>
+              <label class="form-label">Dose</label>
+              <input type="text" name="dose" class="form-input" placeholder="e.g. 1 Tab">
+            </div>
+            <div>
+              <label class="form-label">Frequency</label>
+              <input type="text" name="frequency" class="form-input" placeholder="e.g. 1-0-1">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:16px;margin-bottom:20px;">
+             <div>
+              <label class="form-label">Duration (Days)</label>
+              <input type="number" name="duration_days" class="form-input" placeholder="7">
+            </div>
+            <div>
+              <label class="form-label">Age Range</label>
+              <input type="text" name="age_range" class="form-input" placeholder="Adults">
+            </div>
+            <div>
+              <label class="form-label">Clinical Instructions</label>
+              <input type="text" name="instructions" class="form-input" placeholder="Postprandial consumption">
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn btn-primary btn-md">SAVE MEDICATION</button>
+            <button type="button" onclick="toggleElement('add-medicine-form')" class="btn btn-ghost btn-md">CANCEL</button>
+          </div>
+        </form>
+      </div>
+
+      {% if medicines %}
+      <div class="meds-grid">
+        {% for med in medicines %}
+        <div id="med-card-{{ med.id }}" class="med-card group">
+          <div class="med-card-header">
+            <div>
+              <div class="med-name">{{ med.normalized_name or med.original_name }}</div>
+              <div class="med-type">{{ med.explanation[:40] if med.explanation else 'Drug Agent' }}</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" onclick="toggleElement('med-edit-{{ med.id }}')" class="nav-icon-btn" style="width:32px;height:32px;background:var(--primary-glow);border-color:rgba(0,212,170,0.2);color:var(--primary);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button type="button" onclick="handleDeleteMedicine('{{ med.id }}')" class="nav-icon-btn" style="width:32px;height:32px;background:rgba(240,82,82,0.08);border-color:rgba(240,82,82,0.2);color:#f87171;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Edit Form (Hidden by default) -->
+          <div id="med-edit-{{ med.id }}" style="display:none;margin-top:20px;padding-top:20px;border-top:1px dashed var(--card-border);" class="anim-in">
+             <form action="/doctor/prescription/{{ prescription.id }}/medicine/{{ med.id }}/update" method="post" style="margin:0;">
+                <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                  <div><label class="form-label">Medication Name</label><input type="text" name="name" value="{{ med.normalized_name or med.original_name }}" class="form-input" required></div>
+                  <div><label class="form-label">Dose</label><input type="text" name="dose" value="{{ med.dose or '' }}" class="form-input"></div>
+                  <div><label class="form-label">Frequency</label><input type="text" name="frequency" value="{{ med.frequency or '' }}" class="form-input"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                  <div><label class="form-label">Duration (Days)</label><input type="number" name="duration_days" value="{{ med.duration_days or '' }}" class="form-input"></div>
+                  <div><label class="form-label">Age Range</label><input type="text" name="age_range" value="{{ med.age_range or '' }}" class="form-input"></div>
+                </div>
+                <div class="mb-4">
+                  <label class="form-label">Clinical Instructions</label>
+                  <textarea name="instructions" class="form-input" style="height:60px;resize:none;">{{ med.instructions or '' }}</textarea>
+                </div>
+                <div style="display:flex;gap:10px;">
+                  <button type="submit" class="btn btn-primary btn-sm">UPDATE RECORD</button>
+                  <button type="button" onclick="toggleElement('med-edit-{{ med.id }}')" class="btn btn-ghost btn-sm">DISMISS</button>
+                </div>
+             </form>
+          </div>
+
+          <div class="med-details">
+            <div>
+              <div class="med-detail-label">Dose</div>
+              <div class="med-detail-value">{{ med.dose or '—' }}</div>
+            </div>
+            <div>
+              <div class="med-detail-label">Frequency</div>
+              <div class="med-detail-value">{{ med.frequency or '—' }}</div>
+            </div>
+            <div>
+              <div class="med-detail-label">Span</div>
+              <div class="med-detail-value">{{ med.duration_days or '—' }} Days</div>
+            </div>
+            <div>
+              <div class="med-detail-label">Age Range</div>
+              <div class="med-detail-value">{{ med.age_range or 'All' }}</div>
+            </div>
+          </div>
+          <div class="med-card-footer">
+            {% set conf = med.confidence or 0 %}
+            {% if conf >= 0.8 %}
+              <span class="med-protocol med-protocol-standard">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Standard Protocol
+              </span>
+            {% else %}
+              <span class="med-protocol med-protocol-override">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Requires Override
+              </span>
+            {% endif %}
+            <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">{{ '%.0f'|format((conf or 0)*100) }}% match</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:48px 24px;background:var(--bg-elevated);border:1px dashed var(--card-border);border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <p style="color:var(--text-dim);font-size:13px;font-weight:500;">No medications identified in current extraction scope.</p>
+        <button type="button" onclick="toggleElement('add-medicine-form')" class="btn btn-ghost btn-sm" style="margin-top:8px;">Add Manually</button>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="rx-bottom-bar">
+      <div class="sig-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Digital Signature: <span class="sig-val">0x{{ prescription.id | string | truncate(6,'','')|upper }}…a10e</span>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" onclick="handlePrescriptionAction('reject')" class="btn btn-danger btn-lg">Reject AI Suggestions</button>
+        <button type="button" onclick="handlePrescriptionAction('verify')" class="btn btn-primary btn-lg">
+          Approve Prescription
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Right: Sidebar -->
+  <div>
+    <!-- Clinical Recommendations -->
+    <div class="doc-card mb-4" style="border-color:var(--primary-glow);">
+      <h3 style="font-size:12px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;">
+        Clinical Recommendations
+      </h3>
+      <form action="/doctor/prescription/{{ prescription.id }}/note" method="post" style="margin:0;">
+        <div class="mb-4">
+          <label class="form-label">Patient Notations</label>
+          <textarea name="note" class="form-input" style="height:100px;background:rgba(0,212,170,0.02);" placeholder="e.g. Clinical history of hypertension. Monitor blood pressure weekly during treatment..." required></textarea>
+        </div>
+        <div class="mb-4">
+          <label class="form-label" style="color:#f59e0b;">Safety Warning</label>
+          <input type="text" name="warning" class="form-input" style="background:rgba(245,158,11,0.02);border-color:rgba(245,158,11,0.15);" placeholder="e.g. Avoid heavy machinery. No alcohol.">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">SAVE RECOMMENDATIONS</button>
+      </form>
+      
+      {% if doctor_notes %}
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--card-border);">
+        {% for note in doctor_notes %}
+        <div class="mb-3" style="padding:12px;background:rgba(255,255,255,0.02);border-radius:10px;">
+          <div style="display:flex;justify-content:between;margin-bottom:6px;">
+             <span class="text-xs font-bold text-primary">DR Note</span>
+             <span class="text-xs text-dim">{{ note.created_at.strftime('%d %b %H:%M') }}</span>
+          </div>
+          <p class="text-sm text-dim">{{ note.note }}</p>
+          {% if note.warning %}
+          <div style="margin-top:8px;padding:6px 10px;background:rgba(245,158,11,0.08);border-radius:6px;border-left:2px solid #f59e0b;">
+            <p class="text-[11px] font-bold" style="color:#f59e0b;">{{ note.warning }}</p>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Alerts -->
+    <div class="alerts-panel" style="margin-bottom:16px;">
+      {% if alerts %}
+        {% for alert in alerts %}
+        <div class="alert-card alert-{{ alert.type }}">
+          <div class="alert-title">
+            {% if alert.type == 'danger' %}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            {% elif alert.type == 'warning' %}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+            {% else %}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            {% endif %}
+            {{ alert.title }}
+          </div>
+          <div class="alert-body">{{ alert.body }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="alert-card alert-success">
+          <div class="alert-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            System Safety Check
+          </div>
+          <div class="alert-body">Overall prescription profile passes system safety checks. No critical interactions detected.</div>
+        </div>
+
+        {% if prescription.ai_confidence_score %}
+        <div class="alert-card alert-warning">
+          <div class="alert-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+            AI Confidence
+          </div>
+          <div class="alert-body">Extraction confidence: {{ '%.0f'|format(prescription.ai_confidence_score*100) }}%. Manual review recommended for flagged fields.</div>
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- Patient Info -->
+    <div class="patient-info-card">
+      <div class="patient-info-title">Patient Information</div>
+      <div class="info-row"><span class="info-key">Name</span><span class="info-val">{{ patient_details.get('name','—') if patient_details else '—' }}</span></div>
+      <div class="info-row"><span class="info-key">Age</span><span class="info-val">{{ patient_details.get('age','—') if patient_details else '—' }}</span></div>
+      <div class="info-row"><span class="info-key">Gender</span><span class="info-val">{{ patient_details.get('gender','—') if patient_details else '—' }}</span></div>
+      <div class="info-row"><span class="info-key">Doctor</span>
+        <span class="info-val">
+          {{ doctor_details.get('name','—') if doctor_details else '—' }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Status</span>
+        <span class="info-val"><span class="status-badge sb-{{ prescription.status }}">{{ prescription.status.replace('_',' ') }}</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleElement(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+        if (el.style.display === 'block') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+}
+
+async function handleDeleteMedicine(medId) {
+    if (!confirm('Permanently delete this medical formulation record?')) return;
+    
+    try {
+        if (typeof window.__loaderStart === 'function') window.__loaderStart();
+        const resp = await fetch(`/doctor/prescription/{{ prescription.id }}/medicine/${medId}/delete`, {
+            method: 'POST'
+        });
+        const res = await resp.json();
+        if (res.success) {
+            const card = document.getElementById(`med-card-${medId}`);
+            if (card) {
+                card.style.transition = 'all 300ms ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => { card.remove(); }, 300);
+            }
+            if (typeof showToast === 'function') showToast('Medication record deleted');
+        }
+    } catch (err) {
+        console.error(err);
+    } finally {
+        if (typeof window.__loaderEnd === 'function') window.__loaderEnd();
+    }
+}
+
+// Browser Web Speech API TTS helper
+async function browserReadText(btn, contextText, lang) {
+    if (!('speechSynthesis' in window)) {
+        alert('Text-to-Speech is not supported in your browser.');
+        return;
+    }
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        btn.innerHTML = btn.getAttribute('data-orig-html') || 'VOICE REPORT';
+        return;
+    }
+    if (!btn.getAttribute('data-orig-html')) btn.setAttribute('data-orig-html', btn.innerHTML);
+    btn.innerHTML = '⏳ GENERATING...';
+
+    let textToSpeak = btn.getAttribute('data-generated-script');
+    
+    if (!textToSpeak) {
+        try {
+            const res = await fetch('/workspace/{{ prescription.id }}/generate-tts-script', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({context_data: contextText})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                textToSpeak = data.script;
+                btn.setAttribute('data-generated-script', textToSpeak);
+            } else {
+                textToSpeak = contextText;
+            }
+        } catch (e) {
+            textToSpeak = contextText;
+        }
+    }
+
+    btn.innerHTML = '🔊 SPEAKING...';
+
+    const utter = new SpeechSynthesisUtterance(textToSpeak);
+    utter.lang = lang || 'en-US';
+    utter.rate = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang.startsWith('en') && v.localService);
+    if (preferred) utter.voice = preferred;
+
+    utter.onend = () => {
+        btn.innerHTML = btn.getAttribute('data-orig-html');
+    };
+    utter.onerror = () => {
+        btn.innerHTML = '⚠️ ERROR';
+    };
+
+    window.speechSynthesis.speak(utter);
+}
+
+// Keep nvidiaReadWorkspace as alias for backward compat
+function nvidiaReadWorkspace(btn, text, lang) { browserReadText(btn, text, lang); }
+
+async function handlePrescriptionAction(action) {
+    const confirmation = action === 'verify' ? 'Approve this prescription?' : 'Reject these AI suggestions?';
+    if (!confirm(confirmation)) return;
+
+    try {
+        if (typeof window.__loaderStart === 'function') window.__loaderStart();
+        const response = await fetch(`/doctor/prescription/{{ prescription.id }}/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) {
+            if (typeof showToast === 'function') showToast(result.message);
+            setTimeout(() => {
+                window.location.href = '/doctor/queue';
+            }, 800);
+        } else {
+            throw new Error(result.message || 'Action failed');
+        }
+    } catch (err) {
+        if (typeof showToast === 'function') showToast(err.message, 'error');
+    } finally {
+        if (typeof window.__loaderEnd === 'function') window.__loaderEnd();
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "doctor_base.html" %}
+{% set active_nav = "prescriptions" %}
+{% set page_title = "Prescriptions" %}
+
+{% block doctor_content %}
+<style>
+.rx-toolbar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+}
+.search-wrap {
+  position: relative; flex: 1; max-width: 360px;
+}
+.search-wrap input {
+  width: 100%; height: 38px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 0 12px 0 38px;
+  font-size: 13px; color: var(--text); font-family: 'Inter', sans-serif;
+  outline: none; transition: all 160ms ease;
+}
+.search-wrap input::placeholder { color: var(--text-dim); }
+.search-wrap input:focus { border-color: var(--primary); background: rgba(0,212,170,0.04); }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
+
+.rx-table-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; overflow: hidden; }
+.rx-table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.rx-count { font-size: 13px; font-weight: 700; color: var(--text); }
+.rx-count small { font-size: 12px; color: var(--text-dim); font-weight: 500; margin-left: 8px; }
+</style>
+
+<div class="rx-toolbar anim-in">
+  <form action="/doctor/prescriptions" method="get" class="search-wrap" style="max-width:400px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" name="q" placeholder="Search prescriptions or patients…" value="{{ query or '' }}">
+  </form>
+  <div style="flex:1;"></div>
+  <a href="/doctor/create" class="btn btn-primary">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Prescription
+  </a>
+</div>
+
+{% if prescriptions %}
+<div class="rx-table-card anim-in">
+  <div class="rx-table-header">
+    <span class="rx-count">Prescriptions <small>{{ prescriptions|length }} records</small></span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Prescription</th>
+          <th>Patient</th>
+          <th style="text-align:center;">Medicines</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rx in prescriptions %}
+        <tr>
+          <td class="col-mono">{{ rx.rx_id }}</td>
+          <td class="col-primary">{{ rx.title }}</td>
+          <td style="color:var(--text-muted);">{{ rx.patient_name }}</td>
+          <td style="text-align:center;">
+            <span style="font-size:13px;font-weight:700;color:var(--primary);font-family:'JetBrains Mono',monospace;">{{ rx.medicine_count }}</span>
+          </td>
+          <td style="font-size:12px;color:var(--text-dim);">{{ rx.created_at }}</td>
+          <td><span class="status-badge sb-{{ rx.status }}">{{ rx.status.replace('_',' ') }}</span></td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <a href="/doctor/prescription/{{ rx.id }}" class="btn btn-ghost btn-sm">Review</a>
+              <a href="/workspace/{{ rx.id }}" class="btn btn-success btn-sm">Workspace</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div style="text-align:center;padding:80px 32px;background:var(--card);border:1px solid var(--card-border);border-radius:16px;" class="anim-in">
+  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.5" style="margin:0 auto 16px;display:block;opacity:0.3;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+  <p style="font-size:14px;font-weight:700;color:var(--text-muted);">{{ 'No results for "' + query + '"' if query else 'No prescriptions yet' }}</p>
+  <a href="/doctor/create" class="btn btn-primary" style="margin-top:20px;display:inline-flex;">Create First Prescription</a>
+</div>
+{% endif %}
+{% endblock %}

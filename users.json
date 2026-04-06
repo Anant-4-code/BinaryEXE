@@ -1,0 +1,51 @@
+{
+    "1": {
+        "email": "shubham.qriocity@gmail.com",
+        "password": "1234",
+        "trial_count": 0
+    },
+    "2": {
+        "email": "shubham.qriocity@gmail.com",
+        "password": "1234"
+    },
+    "3": {
+        "email": "shubham.qriocity@gmail.com",
+        "password": "1234",
+        "trial_count": 0
+    },
+    "4": {
+        "email": "shubham.qriocity@gmail.com",
+        "password": "1234",
+        "trial_count": 0
+    },
+    "1234": {
+        "email": "1234",
+        "password": "1234",
+        "trial_count": 9
+    },
+    "11": {
+        "email": "11",
+        "password": "11",
+        "trial_count": 7
+    },
+    "123": {
+        "email": "123",
+        "password": "123",
+        "trial_count": 2
+    },
+    "test1": {
+        "email": "shubham.qriocity@gmail.com",
+        "password": "1234",
+        "trial_count": 9
+    },
+    "test2": {
+        "email": "shubham.qriocity@gmail.com",
+        "password": "123",
+        "trial_count": 6
+    },
+    "abc": {
+        "email": "abc@gmail.com",
+        "password": "abc",
+        "trial_count": 10
+    }
+}

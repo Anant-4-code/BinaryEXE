@@ -1,0 +1,185 @@
+{% extends "doctor_base.html" %}
+{% set active_nav = "patients" %}
+{% set page_title = patient.name if patient else "Patient Profile" %}
+
+{% block nav_actions %}
+{% if patient %}
+<a href="/doctor/create?patient_id={{ patient.id }}" class="nav-action-btn primary-btn">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  NEW RX
+</a>
+{% endif %}
+{% endblock %}
+
+{% block doctor_content %}
+{% if not patient %}
+<div style="text-align:center;padding:80px;"><p style="color:var(--text-muted);">Patient not found.</p></div>
+{% else %}
+<style>
+.profile-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+
+/* Sidebar card */
+.patient-sidebar {
+  display: flex; flex-direction: column; gap: 14px;
+  position: sticky; top: calc(var(--nav-h) + 16px);
+}
+.profile-card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 22px;
+}
+.profile-avatar-wrap { text-align: center; margin-bottom: 18px; }
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 12px;
+  background: linear-gradient(135deg, var(--primary), #00a37d);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 900; color: #0f1117;
+}
+.profile-name { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+.profile-id   { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); margin-top: 4px; }
+
+.info-list { display: flex; flex-direction: column; gap: 0; }
+.info-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.info-item:last-child { border-bottom: none; }
+.info-item-key { font-size: 11px; color: var(--text-dim); }
+.info-item-val { font-size: 12px; font-weight: 600; color: var(--text); text-align: right; max-width: 160px; }
+
+/* Adherence mini summary */
+.adh-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; }
+.adh-title { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+.adh-stat { text-align: center; }
+.adh-stat-num { font-size: 22px; font-weight: 900; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+.adh-stat-label { font-size: 10px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.adh-bar-wrap { margin-top: 14px; }
+.adh-bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); font-weight: 700; margin-bottom: 5px; }
+.adh-bar-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+.adh-bar-fill  { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), #00a37d); transition: width 600ms ease; }
+
+/* Main content */
+.profile-main { display: flex; flex-direction: column; gap: 16px; }
+
+.section-title-bar {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.section-title { font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* Prescription history */
+.rx-history-card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; overflow: hidden;
+}
+.rx-history-item {
+  display: grid; grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: 14px;
+  padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 120ms ease;
+}
+.rx-history-item:last-child { border-bottom: none; }
+.rx-history-item:hover { background: rgba(255,255,255,0.02); }
+.rx-num { font-size: 11px; font-weight: 700; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+.rx-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.rx-date  { font-size: 11px; color: var(--text-dim); }
+.rx-actions { display: flex; gap: 6px; }
+
+/* Notes section */
+.notes-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; }
+.notes-empty { font-size: 13px; color: var(--text-dim); font-style: italic; }
+</style>
+
+<div class="profile-layout anim-in">
+
+  <!-- Left Sidebar -->
+  <div class="patient-sidebar">
+    <div class="profile-card">
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar">{{ (patient.name or 'P')[0:2]|upper }}</div>
+        <div class="profile-name">{{ patient.name }}</div>
+        <div class="profile-id">{{ patient.patient_rx_id or 'No ID' }}</div>
+      </div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-item-key">Age</span><span class="info-item-val">{{ patient.age or '—' }}</span></div>
+        <div class="info-item"><span class="info-item-key">Gender</span><span class="info-item-val">{{ patient.gender or '—' }}</span></div>
+        <div class="info-item"><span class="info-item-key">Phone</span><span class="info-item-val">{{ patient.phone or '—' }}</span></div>
+        <div class="info-item"><span class="info-item-key">Blood Group</span><span class="info-item-val">{{ patient.blood_group or '—' }}</span></div>
+        <div class="info-item"><span class="info-item-key">Weight</span><span class="info-item-val">{{ patient.weight or '—' }} kg</span></div>
+        <div class="info-item"><span class="info-item-key">Allergies</span><span class="info-item-val">{{ patient.allergies or 'None known' }}</span></div>
+        <div class="info-item"><span class="info-item-key">Condition</span><span class="info-item-val">{{ patient.disease_or_condition or '—' }}</span></div>
+        <div class="info-item">
+          <span class="info-item-key">Status</span>
+          <span class="info-item-val">
+            <span class="status-badge sb-{{ patient.status or 'pending' }}">{{ (patient.status or 'Active').replace('_',' ') }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adherence -->
+    {% if adherence %}
+    <div class="adh-card">
+      <div class="adh-title">Medication Adherence</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="adh-stat"><div class="adh-stat-num" style="color:var(--primary);">{{ adherence.taken or 0 }}</div><div class="adh-stat-label">Taken</div></div>
+        <div class="adh-stat"><div class="adh-stat-num" style="color:#f05252;">{{ adherence.missed or 0 }}</div><div class="adh-stat-label">Missed</div></div>
+        <div class="adh-stat"><div class="adh-stat-num" style="color:#f59e0b;">{{ adherence.upcoming or 0 }}</div><div class="adh-stat-label">Upcoming</div></div>
+      </div>
+      <div class="adh-bar-wrap">
+        <div class="adh-bar-label"><span>Adherence</span><span>{{ adherence.percentage or 0 }}%</span></div>
+        <div class="adh-bar-track"><div class="adh-bar-fill" style="width:{{ adherence.percentage or 0 }}%;"></div></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Main Content -->
+  <div class="profile-main">
+    <!-- Prescription History -->
+    <div class="rx-history-card">
+      <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div class="section-title-bar" style="margin:0;">
+          <span class="section-title">Prescription History</span>
+          <a href="/doctor/create?patient_id={{ patient.id }}" class="btn btn-primary btn-sm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Rx
+          </a>
+        </div>
+      </div>
+
+      {% if prescriptions %}
+        {% for rx in prescriptions %}
+        <div class="rx-history-item">
+          <div class="rx-num">{{ loop.index }}.</div>
+          <div>
+            <div class="rx-title">{{ rx.title }}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">{{ rx.medicine_count or 0 }} medicines · {{ rx.created_at }}</div>
+          </div>
+          <span class="status-badge sb-{{ rx.status }}">{{ rx.status.replace('_',' ') }}</span>
+          <div class="rx-actions">
+            <a href="/doctor/prescription/{{ rx.id }}" class="btn btn-ghost btn-sm">Review</a>
+            <a href="/workspace/{{ rx.id }}" class="btn btn-success btn-sm">Open</a>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div style="padding:48px;text-align:center;color:var(--text-dim);">
+        <p style="font-size:13px;font-weight:600;">No prescriptions yet</p>
+        <a href="/doctor/create?patient_id={{ patient.id }}" class="btn btn-primary btn-sm" style="display:inline-flex;margin-top:14px;">
+          Create First Prescription
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Notes -->
+    <div class="notes-card">
+      <div class="section-title" style="margin-bottom:14px;">Clinical Notes</div>
+      {% if patient.notes %}
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.7;">{{ patient.notes }}</p>
+      {% else %}
+        <p class="notes-empty">No clinical notes recorded for this patient.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endif %}
+{% endblock %}

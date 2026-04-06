@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+.nav-links { display: none; }
+
+.role-page {
+  min-height: 100vh; padding: calc(var(--nav-h) + 64px) 32px 64px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.role-page::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 600px;
+  background: radial-gradient(circle, rgba(0,212,170,0.06) 0%, transparent 65%);
+  border-radius: 50%; pointer-events: none;
+}
+
+.role-header { text-align: center; margin-bottom: 56px; position: relative; z-index: 1; }
+.role-page-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2);
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 20px;
+}
+.role-page-title { font-size: clamp(32px,4vw,48px); font-weight: 900; color: var(--text); letter-spacing: -0.04em; margin-bottom: 12px; }
+.role-page-sub { font-size: 15px; color: var(--text-muted); }
+
+.roles-grid {
+  display: grid; grid-template-columns: repeat(3, 340px);
+  gap: 20px; max-width: 1100px; position: relative; z-index: 1;
+}
+
+.role-card {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px; padding: 36px 32px;
+  text-decoration: none; color: var(--text);
+  transition: all 260ms cubic-bezier(.22,1,.36,1);
+  display: block; position: relative; overflow: hidden;
+}
+.role-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: transparent; transition: background 260ms ease;
+}
+.role-card:hover { transform: translateY(-6px); box-shadow: 0 32px 64px rgba(0,0,0,0.4); }
+
+.role-card.patient:hover  { border-color: rgba(0,212,170,0.3); }
+.role-card.patient:hover::after  { background: var(--primary); }
+.role-card.doctor:hover   { border-color: rgba(59,130,246,0.3); }
+.role-card.doctor:hover::after   { background: #3b82f6; }
+.role-card.receptionist:hover { border-color: rgba(168,85,247,0.3); }
+.role-card.receptionist:hover::after { background: #a855f7; }
+
+.role-emoji { font-size: 40px; margin-bottom: 20px; display: block; }
+
+.role-card-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 4px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.badge-patient     { background: rgba(0,212,170,0.1); color: var(--primary); border: 1px solid rgba(0,212,170,0.2); }
+.badge-doctor      { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+.badge-receptionist{ background: rgba(168,85,247,0.1); color: #c084fc; border: 1px solid rgba(168,85,247,0.2); }
+
+.role-card-title { font-size: 21px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-bottom: 10px; }
+.role-card-desc  { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-bottom: 24px; }
+
+.role-card-perms { display: flex; flex-direction: column; gap: 7px; margin-bottom: 28px; }
+.role-perm {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted);
+}
+.role-perm svg { color: var(--primary); flex-shrink: 0; }
+
+.role-card-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  font-size: 13px; font-weight: 700; color: var(--text);
+  transition: all 160ms ease;
+}
+.role-card:hover .role-card-cta { background: rgba(255,255,255,0.07); }
+
+.role-back {
+  margin-top: 32px; font-size: 13px; color: var(--text-dim);
+  position: relative; z-index: 1;
+}
+.role-back a { color: var(--primary); text-decoration: none; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="role-page">
+  <div class="role-header">
+    <div class="role-page-eyebrow">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>
+      Sanjeevani AI
+    </div>
+    <h1 class="role-page-title">Who are you?</h1>
+    <p class="role-page-sub">Select your role to enter the right portal</p>
+  </div>
+
+  <div class="roles-grid">
+    <!-- Patient -->
+    <a href="/login" class="role-card patient">
+      <span class="role-emoji">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </span>
+      <span class="role-card-badge badge-patient">Patient</span>
+      <div class="role-card-title">Patient Portal</div>
+      <div class="role-card-desc">Access your prescriptions, track medication schedules, receive dose reminders, and monitor your health history.</div>
+      <div class="role-card-perms">
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          View prescriptions & medicines
+        </div>
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Dose calendar & reminders
+        </div>
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Adherence analytics
+        </div>
+      </div>
+      <div class="role-card-cta">
+        Enter Patient Portal
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+    </a>
+
+    <!-- Doctor -->
+    <a href="/doctor/queue" class="role-card doctor">
+      <span class="role-emoji">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/>
+        </svg>
+      </span>
+      <span class="role-card-badge badge-doctor">Clinician</span>
+      <div class="role-card-title">Doctor Panel</div>
+      <div class="role-card-desc">Manage patient queues, review AI-extracted prescriptions, verify medications, and track patient adherence.</div>
+      <div class="role-card-perms">
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Patient queue management
+        </div>
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Verify & create prescriptions
+        </div>
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Clinical analytics dashboard
+        </div>
+      </div>
+      <div class="role-card-cta">
+        Enter Doctor Panel
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+    </a>
+
+    <!-- Receptionist -->
+    <a href="/receptionist" class="role-card receptionist">
+      <span class="role-emoji">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/><path d="M10 9h4"/><path d="M12 7v4"/>
+        </svg>
+      </span>
+      <span class="role-card-badge badge-receptionist">Staff</span>
+      <div class="role-card-title">Reception Desk</div>
+      <div class="role-card-desc">Register new patients, manage appointment queues, coordinate clinical workflows, and handle patient check-ins.</div>
+      <div class="role-card-perms">
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Register & manage patients
+        </div>
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Appointment scheduling
+        </div>
+        <div class="role-perm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Queue coordination
+        </div>
+      </div>
+      <div class="role-card-cta">
+        Enter Reception
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+    </a>
+  </div>
+
+  <div class="role-back">
+    Not sure? <a href="/">Back to homepage</a>
+  </div>
+</div>
+{% endblock %}
