@@ -12,9 +12,12 @@ from app.models.models import (  # noqa: F401
     User, Prescription, Medicine, DoctorNote,
     XrayScan, XrayDetection, XrayAIReport, XrayVerification,
     DoctorProfile, ReceptionistProfile, PatientProfile, AuditLog,
+    NotificationPreference, RefillRequest, DoctorAvailability, Appointment,
+    MessageThread, ThreadMessage, VitalsLog, LabDocument, CaregiverLink,
 )
 
-from app.routers import upload, workspace, calendar, notifications, export, dashboard, receptionist, doctor, speech, xray
+from app.routers import upload, workspace, calendar, notifications, export, dashboard, receptionist, doctor, speech, xray, patient
+
 
 
 settings = get_settings()
@@ -106,6 +109,8 @@ app.include_router(receptionist.router)
 app.include_router(doctor.router)
 app.include_router(speech.router)
 app.include_router(xray.router)
+app.include_router(patient.router)
+
 
 
 @app.on_event("startup")

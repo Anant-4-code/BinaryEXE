@@ -286,3 +286,144 @@ class XrayVerification(Base):
     verified_at        = Column(DateTime, default=datetime.utcnow)
 
     scan = relationship("XrayScan", back_populates="verifications")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PATIENT UI & FEATURE EXPANSION MODELS
+# ═══════════════════════════════════════════════════════════════════════════
+
+class NotificationPreference(Base):
+    """Multi-channel notification preferences (in_app, sms, whatsapp, voice_call)."""
+    __tablename__ = "notification_preferences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    channel = Column(String(30), default="in_app")  # in_app | sms | whatsapp | voice_call
+    language = Column(String(20), default="en")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class RefillRequest(Base):
+    """Medication refill requests submitted by patients."""
+    __tablename__ = "refill_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prescription_id = Column(Integer, ForeignKey("prescriptions.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String(30), default="requested")  # requested | approved | denied | fulfilled
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+
+    prescription = relationship("Prescription", foreign_keys=[prescription_id])
+    patient = relationship("User", foreign_keys=[patient_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+
+class DoctorAvailability(Base):
+    """Doctor slot availability for patient appointments."""
+    __tablename__ = "doctor_availability"
+
+    id = Column(Integer, primary_key=True, index=True)
+    doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    day_of_week = Column(Integer, nullable=False)  # 0=Monday, 6=Sunday
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)
+    slot_minutes = Column(Integer, default=15)
+
+    doctor = relationship("User", foreign_keys=[doctor_id])
+
+
+class Appointment(Base):
+    """Patient appointments with doctors."""
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    scheduled_at = Column(DateTime, nullable=False)
+    status = Column(String(30), default="requested")  # requested | confirmed | completed | cancelled | no_show
+    reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    patient = relationship("User", foreign_keys=[patient_id])
+    doctor = relationship("User", foreign_keys=[doctor_id])
+
+
+class MessageThread(Base):
+    """Async Q&A message thread between patient and doctor."""
+    __tablename__ = "message_threads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    prescription_id = Column(Integer, ForeignKey("prescriptions.id"), nullable=True)
+    status = Column(String(30), default="open")  # open | closed
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    patient = relationship("User", foreign_keys=[patient_id])
+    doctor = relationship("User", foreign_keys=[doctor_id])
+    messages = relationship("ThreadMessage", back_populates="thread", cascade="all, delete-orphan")
+
+
+class ThreadMessage(Base):
+    """Messages within an async Q&A thread."""
+    __tablename__ = "thread_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(Integer, ForeignKey("message_threads.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    read_at = Column(DateTime, nullable=True)
+
+    thread = relationship("MessageThread", back_populates="messages")
+    sender = relationship("User", foreign_keys=[sender_id])
+
+
+class VitalsLog(Base):
+    """Patient logged vitals (blood pressure, blood sugar, etc.)."""
+    __tablename__ = "vitals_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    metric = Column(String(50), nullable=False)  # bp_systolic, bp_diastolic, blood_sugar, weight, pulse
+    value = Column(Float, nullable=False)
+    unit = Column(String(20), nullable=False)
+    recorded_at = Column(DateTime, default=datetime.utcnow)
+    source = Column(String(50), default="patient_entered")
+
+    patient = relationship("User", foreign_keys=[patient_id])
+
+
+class LabDocument(Base):
+    """Uploaded lab reports and test documents."""
+    __tablename__ = "lab_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    object_storage_key = Column(String(512), nullable=False)
+    label = Column(String(255), nullable=True)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    patient = relationship("User", foreign_keys=[patient_id])
+    uploader = relationship("User", foreign_keys=[uploaded_by])
+
+
+class CaregiverLink(Base):
+    """Delegated caregiver access links."""
+    __tablename__ = "caregiver_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    caregiver_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    permission = Column(String(30), default="view_only")  # view_only | view_and_act
+    status = Column(String(30), default="pending")  # pending | active | revoked
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    patient = relationship("User", foreign_keys=[patient_id])
+    caregiver = relationship("User", foreign_keys=[caregiver_user_id])
+
