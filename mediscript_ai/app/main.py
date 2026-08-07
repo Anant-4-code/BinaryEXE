@@ -72,8 +72,15 @@ def init_db() -> None:
         if "phone" not in user_cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(50)"))
+        if "is_active" not in user_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+        if "mfa_enabled" not in user_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0"))
     except Exception:
         pass
+
 
     # Base.metadata.create_all handles table creation for all models.
 
