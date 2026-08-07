@@ -14,7 +14,9 @@ from app.config import get_settings
 from app.core.database import get_db
 from app.models.models import ForwardQueue, Prescription, User
 
-router = APIRouter(prefix="/receptionist", tags=["receptionist"])
+from app.core.deps import require_role
+
+router = APIRouter(prefix="/receptionist", tags=["receptionist"], dependencies=[Depends(require_role("receptionist"))])
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 
@@ -84,9 +86,9 @@ def receptionist_panel(request: Request, db: Session = Depends(get_db)) -> Any:
         })
 
     return templates.TemplateResponse(
+        request,
         "receptionist.html",
         {
-            "request": request,
             "title": "Receptionist Panel",
             "doctors": DEMO_DOCTORS,
             "recent_activity": activity,

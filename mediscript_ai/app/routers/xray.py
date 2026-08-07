@@ -34,7 +34,9 @@ from app.models.models import (
 logger = logging.getLogger(__name__)
 
 settings  = get_settings()
-router    = APIRouter(prefix="/doctor/xray", tags=["xray"])
+from app.core.deps import require_role
+
+router    = APIRouter(prefix="/doctor/xray", tags=["xray"], dependencies=[Depends(require_role("doctor"))])
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 
 DEMO_DOCTOR = {"id": 9001, "name": "Dr. Priya Sharma", "specialization": "General Physician"}

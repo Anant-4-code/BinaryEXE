@@ -18,9 +18,9 @@ Rx
 Tab Telmisartan 40mg
 """
 
-async def test():
+async def run_test_ext():
     result = await call_gemma_extract_patient_doctor(sample_text)
     print(json.dumps(result, indent=2))
 
 if __name__ == "__main__":
-    asyncio.run(test())
+    asyncio.run(run_test_ext())

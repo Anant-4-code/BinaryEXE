@@ -27,7 +27,7 @@ class DummyClient:
     async def __aexit__(self, exc_type, exc, tb) -> None:
         return None
 
-    async def post(self, path: str, json: Dict[str, Any]) -> DummyResponse:
+    async def post(self, path: str, *args: Any, **kwargs: Any) -> DummyResponse:
         medicines_json = json.dumps(
             [
                 {

@@ -1,7 +1,9 @@
 import logging
 from typing import Optional
-import grpc
-from riva.client.proto import riva_tts_pb2, riva_tts_pb2_grpc
+try:
+    import grpc
+except ImportError:
+    grpc = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,11 @@ def synthesize_speech(text: str, language: str = 'en') -> Optional[bytes]:
     AUTH_TOKEN = "Bearer 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"
 
     try:
+        # Lazy import so the module loads fine without the Riva SDK installed
+        import grpc as _grpc
+        from riva.client.proto import riva_tts_pb2, riva_tts_pb2_grpc
+        grpc = _grpc
+
         # Enforce clinical brevity
         clean_text = text[:1000]
         

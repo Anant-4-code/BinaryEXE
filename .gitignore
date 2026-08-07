@@ -46,6 +46,8 @@ htmlcov/
 # Databases and Large Models
 *.db
 *.onnx
+*.zip
 uploads/
 err.txt
 node_modules
+

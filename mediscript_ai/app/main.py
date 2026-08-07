@@ -13,7 +13,7 @@ from app.models.models import (  # noqa: F401
     User, Prescription, Medicine, DoctorNote,
     XrayScan, XrayDetection, XrayAIReport, XrayVerification,
 )
-from app.routers import auth, upload, workspace, calendar, notifications, export, dashboard, receptionist, doctor, speech, xray
+from app.routers import upload, workspace, calendar, notifications, export, dashboard, receptionist, doctor, speech, xray
 
 
 settings = get_settings()
@@ -89,7 +89,6 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 
 app.include_router(dashboard.router)
-app.include_router(auth.router)
 app.include_router(upload.router)
 app.include_router(workspace.router)
 app.include_router(calendar.router)

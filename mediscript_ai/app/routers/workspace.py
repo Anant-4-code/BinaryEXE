@@ -3,7 +3,6 @@ import json
 import logging
 from typing import Any
 from pathlib import Path
-
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
@@ -27,7 +26,7 @@ from app.services.gemma_service import (
 from app.services.correction_service import correct_medicines_batch
 from app.services.validation_service import validate_medicines
 from app.utils import format_frequency
-
+from app.core.deps import get_current_user, require_role
 
 router = APIRouter(prefix="/workspace", tags=["workspace"])
 settings = get_settings()
@@ -37,6 +36,16 @@ logger = logging.getLogger(__name__)
 
 PATIENT_KEYS = ["name", "age", "gender", "address", "phone", "disease_or_condition", "medicines_summary", "other"]
 DOCTOR_KEYS = ["name", "qualification", "specialization", "clinic_hospital", "address", "phone", "other"]
+
+
+def _get_prescription_owned(prescription_id: int, db: Session, current_user: User) -> Prescription:
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    return prescription
 
 
 async def _run_all_extractions_core(prescription_id: int, db: Session) -> None:
@@ -101,7 +110,7 @@ async def _run_all_extractions_core(prescription_id: int, db: Session) -> None:
             )
             med.explanation = (explanation or "").strip()[:500]
         except Exception as e:
-            logger.error(f"Failed to generate initial explanation for {med.normalized_name}: {e}")
+            logger.error(f"Failed to pre-explain medicine {med.id}: {e}")
 
     prescription.confidence_score = final_conf
     db.commit()
@@ -115,10 +124,9 @@ async def workspace_view(
     saved: int = Query(0),
     error: str = Query(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     analytics = compute_analytics_for_prescription(db, prescription_id)
 
@@ -137,150 +145,43 @@ async def workspace_view(
             pass
     if prescription.transliterated_json:
         try:
-            t = json.loads(prescription.transliterated_json)
-            if t and t.get("language"):
-                transliterated = t
+            transliterated = json.loads(prescription.transliterated_json)
         except (json.JSONDecodeError, TypeError):
             pass
-
-    verifier_name = None
-    if prescription.verified_by:
-        verifier = db.query(User).filter(User.id == prescription.verified_by).first()
-        if verifier:
-            verifier_name = verifier.name or verifier.email
 
     export_overrides = {}
     if prescription.export_overrides_json:
         try:
             export_overrides = json.loads(prescription.export_overrides_json) or {}
         except (json.JSONDecodeError, TypeError):
-            export_overrides = {}
-
-    def _dict_to_lines(dct: dict) -> str:
-        lines = []
-        for k, v in (dct or {}).items():
-            if v and str(v).strip():
-                key = str(k).replace("_", " ").title()
-                lines.append(f"{key}: {v}")
-        return "\n".join(lines)
-
-    export_defaults = {
-        "date": prescription.created_at.strftime("%d-%m-%Y") if prescription.created_at else "",
-        "time": prescription.created_at.strftime("%H:%M") if prescription.created_at else "",
-        "patient_text": _dict_to_lines(patient_details),
-        "doctor_text": _dict_to_lines(doctor_details),
-        "instructions_text": "",
-    }
-
-    instr_lines = []
-    for i, m in enumerate(prescription.medicines or [], 1):
-        name = m.normalized_name or m.original_name or f"Medicine {i}"
-        inst = (m.instructions or "").strip()
-        expl = (m.explanation or "").strip()
-        msg = inst
-        if expl:
-            msg = (msg + " | " if msg else "") + expl
-        if msg:
-            trimmed = msg[:200]
-            instr_lines.append(f"{i}. {name}: {trimmed}")
-    export_defaults["instructions_text"] = "\n".join(instr_lines)
-
-    image_url = None
-    if prescription.image_path:
-        try:
-            image_url = f"/uploads/{Path(prescription.image_path).name}"
-        except Exception:
-            image_url = None
+            pass
 
     return templates.TemplateResponse(
+        request,
         "workspace.html",
         {
-            "request": request,
             "prescription": prescription,
-            "tab": tab,
-            "saved": saved,
-            "error": error,
             "analytics": analytics,
+            "tab": tab,
+            "active_tab": tab,
+            "saved": saved,
+            "error_msg": error,
             "patient_details": patient_details,
             "doctor_details": doctor_details,
             "transliterated": transliterated,
-            "image_url": image_url,
-            "export_overrides": export_overrides,
-            "export_defaults": export_defaults,
-            "patient_keys": PATIENT_KEYS,
-            "doctor_keys": DOCTOR_KEYS,
-            "verifier_name": verifier_name,
-            "transliteration_languages": [
-                ("english", "English"),
-                ("hindi", "Hindi"),
-                ("marathi", "Marathi"),
-                ("kannada", "Kannada"),
-                ("gujarati", "Gujarati"),
-                ("punjabi", "Punjabi"),
-                ("bengali", "Bengali"),
-                ("tamil", "Tamil"),
-                ("telugu", "Telugu"),
-                ("malayalam", "Malayalam"),
-                ("odia", "Odia"),
-                ("sanskrit", "Sanskrit"),
-            ],
+            "export": export_overrides,
+            "transliteration_languages": TRANSLITERATION_LANGUAGES,
         },
     )
-
-
-@router.post("/{prescription_id}/extract")
-async def run_extraction(
-    prescription_id: int,
-    db: Session = Depends(get_db),
-) -> Any:
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription or not prescription.raw_text:
-        raise HTTPException(status_code=404, detail="Prescription text not found")
-
-    if prescription.status == PrescriptionStatusEnum.VERIFIED:
-        raise HTTPException(status_code=400, detail="Cannot modify a verified prescription")
-
-    extraction = await call_gemma(prescription.raw_text)
-    gemma_meds = extraction.medicines or []
-
-    # ✅ CORRECTION LAYER: Fix spelling, complete missing data, normalize formats
-    logger.info(f"Correcting {len(gemma_meds)} extracted medicines")
-    corrected_meds = await correct_medicines_batch(gemma_meds)
-
-    validated, final_conf = validate_medicines(
-        gemma_medicines=[GemmaMedicine(**m.dict()) for m in corrected_meds],
-        ocr_reliability=prescription.confidence_score / 100.0,
-        json_parse_success=extraction.json_parse_success,
-    )
-
-    for med in list(prescription.medicines):
-        db.delete(med)
-
-    for item in validated:
-        med = Medicine(
-            prescription_id=prescription.id,
-            original_name=item.original_name,
-            normalized_name=item.normalized_name,
-            dose=item.dose,
-            frequency=item.frequency,
-            duration_days=item.duration_days,
-            instructions=item.instructions,
-            confidence=item.confidence,
-            age_range=item.age_range or None,
-        )
-        db.add(med)
-
-    prescription.confidence_score = final_conf
-    db.commit()
-
-    return RedirectResponse(url=f"/workspace/{prescription_id}?tab=overview", status_code=303)
 
 
 @router.get("/{prescription_id}/refresh-all")
 async def refresh_all_extractions_get(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
+    _get_prescription_owned(prescription_id, db, current_user)
     await _run_all_extractions_core(prescription_id, db)
     return RedirectResponse(url=f"/workspace/{prescription_id}?tab=overview", status_code=303)
 
@@ -289,7 +190,9 @@ async def refresh_all_extractions_get(
 async def refresh_all_extractions_post(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
+    _get_prescription_owned(prescription_id, db, current_user)
     await _run_all_extractions_core(prescription_id, db)
     return RedirectResponse(url=f"/workspace/{prescription_id}?tab=overview", status_code=303)
 
@@ -298,10 +201,11 @@ async def refresh_all_extractions_post(
 async def run_extract_patient_doctor(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Extract patient and doctor details from OCR text using AI."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription or not prescription.raw_text:
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
+    if not prescription.raw_text:
         raise HTTPException(status_code=404, detail="Prescription text not found")
 
     if prescription.status == PrescriptionStatusEnum.VERIFIED:
@@ -320,11 +224,10 @@ async def update_patient_doctor(
     prescription_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Save or update patient and doctor details from user form (edit/enter)."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     form = await request.form()
     patient = {k: (form.get(f"patient_{k}") or "").strip() for k in PATIENT_KEYS}
@@ -342,11 +245,10 @@ async def update_prescription_meta(
     prescription_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Update prescription title and caption."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
     form = await request.form()
     title = (form.get("title") or "").strip()
     if title:
@@ -362,11 +264,10 @@ async def update_export_overrides(
     prescription_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Persist editable fields used by PDF export (patient/doctor blocks, date/time, instructions)."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     form = await request.form()
     overrides = {
@@ -424,10 +325,9 @@ async def update_export_overrides(
 async def refresh_export_overrides(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     patient_details = {}
     doctor_details = {}
@@ -505,10 +405,9 @@ async def convert_export_data(
     prescription_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    _get_prescription_owned(prescription_id, db, current_user)
 
     form = await request.form()
     lang = (form.get("language") or "").strip().lower()
@@ -537,11 +436,10 @@ async def update_medicine(
     medicine_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Update a single medicine's structured data (name, dose, frequency, etc.)."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     if prescription.status == PrescriptionStatusEnum.VERIFIED:
         raise HTTPException(status_code=400, detail="Cannot modify a verified prescription")
@@ -575,11 +473,10 @@ async def run_explain_medicine(
     prescription_id: int,
     medicine_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Generate AI explanation for a medicine and save it."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     medicine = db.query(Medicine).filter(
         Medicine.id == medicine_id,
@@ -605,11 +502,10 @@ async def run_explain_medicine(
 async def run_explain_all_medicines(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Generate AI explanations for all medicines in the prescription."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     print(f"Generating explanations for {len(prescription.medicines)} medicines...")
     for medicine in prescription.medicines:
@@ -682,11 +578,10 @@ async def run_transliterate(
     prescription_id: int,
     language: str = Form(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Transliterate full prescription (patient, doctor, medicines) into selected language. One language at a time."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     lang_key = language.lower().strip()
     valid_keys = [k for k, _ in TRANSLITERATION_LANGUAGES]
@@ -737,10 +632,9 @@ async def confirm_prescription(
     prescription_id: int,
     start_date: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
 
     if not prescription.medicines:
         return RedirectResponse(
@@ -773,16 +667,16 @@ async def confirm_prescription(
 async def verify_prescription_workspace(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("doctor")),
 ) -> Any:
     """Clinically verify a prescription by a doctor."""
+    # Since doctors can verify any prescription, we query without ownership check:
     prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
     if not prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
 
-    # In current demo mode, we use the hardcoded DEMO_DOCTOR ID from doctor.py
-    # or a generic doctor ID (e.g. 9001).
     prescription.status = PrescriptionStatusEnum.VERIFIED
-    prescription.verified_by = 9001  # Hardcoded for clinical demo flow
+    prescription.verified_by = current_user.id
     prescription.verified_at = datetime.utcnow()
     
     # Also update any forward queue items as verified
@@ -791,17 +685,19 @@ async def verify_prescription_workspace(
             fq.status = "verified"
             fq.reviewed_at = datetime.utcnow()
 
+    db.commit()
+    return RedirectResponse(url=f"/workspace/{prescription_id}?tab=overview", status_code=303)
+
 
 @router.post("/{prescription_id}/chat")
 async def workspace_chat(
     prescription_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
-    # Check prescription exists
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    # Check prescription exists and user owns it
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
         
     try:
         body = await request.json()
@@ -855,16 +751,16 @@ async def workspace_chat(
         logger.error(f"Workspace Chat API failed: {exc}")
         return JSONResponse({"answer": "Sanjivini AI service temporarily unavailable. Please refer to your clinical overview."})
 
+
 @router.post("/{prescription_id}/generate-tts-script")
 async def workspace_generate_tts_script(
     prescription_id: int,
     request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Generate a conversational TTS script dynamically using Gemma/Ollama."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
+    prescription = _get_prescription_owned(prescription_id, db, current_user)
         
     try:
         body = await request.json()
@@ -882,4 +778,3 @@ async def workspace_generate_tts_script(
     except Exception as exc:
         logger.error(f"Failed to generate TTS script: {exc}")
         raise HTTPException(status_code=500, detail="Failed to generate voice script.")
-

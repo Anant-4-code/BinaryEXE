@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.core.database import get_db
-from app.models.models import Prescription, PrescriptionStatusEnum
+from app.models.models import Prescription, PrescriptionStatusEnum, User
 from app.schemas.schemas import OCRResult
 from app.services.handwriting_service import run_handwriting_model
+from app.core.deps import get_current_user
 
 from fastapi.templating import Jinja2Templates
 
@@ -19,8 +20,8 @@ settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 
 @router.get("/", response_class=HTMLResponse)
-async def get_upload_page(request: Request) -> Any:
-    return templates.TemplateResponse("upload.html", {"request": request})
+async def get_upload_page(request: Request, current_user: User = Depends(get_current_user)) -> Any:
+    return templates.TemplateResponse(request, "upload.html", {})
 
 @router.post("/", response_class=RedirectResponse)
 async def upload_prescription(
@@ -28,6 +29,7 @@ async def upload_prescription(
     title: str = Form("Prescription"),
     caption: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Only image files are supported")
@@ -50,7 +52,7 @@ async def upload_prescription(
         raise HTTPException(status_code=400, detail=str(e))
 
     prescription = Prescription(
-        user_id=1,
+        user_id=current_user.id,
         title=(title or "Prescription").strip(),
         caption=(caption or "").strip() or None,
         raw_text=ocr_result.raw_text,
@@ -70,9 +72,13 @@ async def update_prescription_meta(
     prescription_id: int,
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Update prescription title and caption (from dashboard)."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
     if not prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
     form = await request.form()
@@ -85,12 +91,8 @@ async def update_prescription_meta(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
-def _delete_prescription_core(db: Session, prescription_id: int) -> None:
+def _delete_prescription_core(db: Session, prescription: Prescription) -> None:
     """Internal helper to delete a prescription and its image file."""
-    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
-    if not prescription:
-        raise HTTPException(status_code=404, detail="Prescription not found")
-
     # Delete the image file if it exists
     if prescription.image_path and os.path.exists(prescription.image_path):
         try:
@@ -107,9 +109,17 @@ def _delete_prescription_core(db: Session, prescription_id: int) -> None:
 async def delete_prescription(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """API delete endpoint (JSON response)."""
-    _delete_prescription_core(db, prescription_id)
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+
+    _delete_prescription_core(db, prescription)
 
     return JSONResponse(
         status_code=200,
@@ -121,11 +131,18 @@ async def delete_prescription(
 async def delete_prescription_form(
     prescription_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Any:
     """
     Delete endpoint intended for HTML forms.
     After deletion, redirect back to the dashboard.
     """
-    _delete_prescription_core(db, prescription_id)
-    return RedirectResponse(url="/dashboard", status_code=303)
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
 
+    _delete_prescription_core(db, prescription)
+    return RedirectResponse(url="/dashboard", status_code=303)

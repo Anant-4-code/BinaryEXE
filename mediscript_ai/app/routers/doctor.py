@@ -17,7 +17,9 @@ from app.models.models import (
 )
 from app.services.analytics_service import compute_analytics_for_prescription
 
-router = APIRouter(prefix="/doctor", tags=["doctor"])
+from app.core.deps import require_role
+
+router = APIRouter(prefix="/doctor", tags=["doctor"], dependencies=[Depends(require_role("doctor"))])
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 
@@ -90,9 +92,9 @@ def doctor_queue(request: Request, filter: str = "all", db: Session = Depends(ge
     queue_items.sort(key=lambda x: (x["priority"] != "urgent", x["status"] == "verified"))
 
     return templates.TemplateResponse(
+        request,
         "doctor_queue.html",
         {
-            "request": request,
             "title": "Priority Queue",
             "doctor": DEMO_DOCTOR,
             "queue_items": queue_items,
@@ -128,9 +130,9 @@ def doctor_patients(request: Request, db: Session = Depends(get_db)) -> Any:
             })
 
     return templates.TemplateResponse(
+        request,
         "doctor_patients.html",
         {
-            "request": request,
             "title": "Patients",
             "doctor": DEMO_DOCTOR,
             "patients": patients,
@@ -239,9 +241,9 @@ def doctor_patient_profile(request: Request, user_id: int, db: Session = Depends
         })
 
     return templates.TemplateResponse(
+        request,
         "doctor_patient_profile.html",
         {
-            "request": request,
             "title": f"Patient — {patient_name}",
             "doctor": DEMO_DOCTOR,
             "patient_name": patient_name,
@@ -286,9 +288,9 @@ def doctor_prescription(
         verifier_name = prescription.verifier.name or prescription.verifier.email
 
     return templates.TemplateResponse(
+        request,
         "doctor_prescription.html",
         {
-            "request": request,
             "title": f"Review — {prescription.title}",
             "doctor": DEMO_DOCTOR,
             "prescription": prescription,
@@ -467,9 +469,9 @@ def doctor_all_prescriptions(request: Request, q: str = "", db: Session = Depend
         })
 
     return templates.TemplateResponse(
+        request,
         "doctor_prescriptions.html",
         {
-            "request": request,
             "title": "All Prescriptions",
             "doctor": DEMO_DOCTOR,
             "prescriptions": rx_list,
@@ -490,9 +492,9 @@ def doctor_create_get(request: Request, raw_notes: str = None, db: Session = Dep
             patients.append({"id": p.user_id, "name": _patient_name(p), "prescription_id": p.id})
 
     return templates.TemplateResponse(
+        request,
         "doctor_create.html",
         {
-            "request": request,
             "title": "Create Prescription",
             "doctor": DEMO_DOCTOR,
             "patients": patients,
@@ -579,9 +581,9 @@ def doctor_analytics(request: Request, db: Session = Depends(get_db)) -> Any:
     monthly_rx = [3, 5, 4, 7, 6, total]
 
     return templates.TemplateResponse(
+        request,
         "doctor_analytics.html",
         {
-            "request": request,
             "title": "Analytics",
             "doctor": DEMO_DOCTOR,
             "stats": {

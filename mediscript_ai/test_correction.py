@@ -13,7 +13,7 @@ from app.services.correction_service import correct_medicines_batch
 from app.schemas.schemas import GemmaMedicine
 
 
-async def test_correction():
+async def run_test_correction():
     """Test correction with the medicines from your screenshot."""
     
     # Medicines as they appear in your screenshot (with errors)
@@ -75,4 +75,4 @@ async def test_correction():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_correction())
+    asyncio.run(run_test_correction())

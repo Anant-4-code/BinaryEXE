@@ -6,7 +6,8 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.models import Dose, Medicine
+from app.models.models import Dose, Medicine, Prescription, User
+from app.core.deps import get_current_user
 
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
@@ -55,8 +56,15 @@ def _dose_is_late(d: Dose) -> bool:
 
 
 @router.post("/doses/{dose_id}/toggle")
-def toggle_dose_taken(dose_id: int, db: Session = Depends(get_db)) -> Any:
-    dose = db.query(Dose).filter(Dose.id == dose_id).first()
+def toggle_dose_taken(
+    dose_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    dose = db.query(Dose).join(Prescription).filter(
+        Dose.id == dose_id,
+        Prescription.user_id == current_user.id
+    ).first()
     if not dose:
         raise HTTPException(status_code=404, detail="Dose not found")
 
@@ -98,7 +106,16 @@ def get_month_summary(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
+    # Verify ownership
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+
     start = date(year, month, 1)
     if month == 12:
         end = date(year + 1, 1, 1)
@@ -198,7 +215,16 @@ def get_day_details(
     prescription_id: int,
     day: str = Query(..., description="YYYY-MM-DD"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
+    # Verify ownership
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+
     try:
         day_date = date.fromisoformat(day)
     except ValueError:
@@ -241,7 +267,16 @@ def get_analytics_series(
     prescription_id: int,
     days: int = Query(30, ge=7, le=365),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
+    # Verify ownership
+    prescription = db.query(Prescription).filter(
+        Prescription.id == prescription_id,
+        Prescription.user_id == current_user.id
+    ).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+
     end_day = datetime.now().date()
     start_day = end_day - timedelta(days=days - 1)
 
@@ -307,8 +342,12 @@ def reschedule_medicine_times(
     times: str = Query(..., description="Comma separated HH:MM list"),
     start_day: Optional[str] = Query(None, description="YYYY-MM-DD (defaults to today)"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
+    medicine = db.query(Medicine).join(Prescription).filter(
+        Medicine.id == medicine_id,
+        Prescription.user_id == current_user.id
+    ).first()
     if not medicine:
         raise HTTPException(status_code=404, detail="Medicine not found")
 
@@ -399,4 +438,3 @@ def reschedule_medicine_times(
         "times": [t.strftime("%H:%M") for t in new_times],
         "start_day": start_date.isoformat(),
     }
-
