@@ -8,11 +8,12 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.core.database import Base, engine
-# Import all models so Base.metadata is fully populated before create_all()
 from app.models.models import (  # noqa: F401
     User, Prescription, Medicine, DoctorNote,
     XrayScan, XrayDetection, XrayAIReport, XrayVerification,
+    DoctorProfile, ReceptionistProfile, PatientProfile, AuditLog,
 )
+
 from app.routers import upload, workspace, calendar, notifications, export, dashboard, receptionist, doctor, speech, xray
 
 

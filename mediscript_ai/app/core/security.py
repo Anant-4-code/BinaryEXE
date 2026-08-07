@@ -19,11 +19,21 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password, scheme="pbkdf2_sha256")
 
 
-def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    subject: str,
+    role: str = "patient",
+    user_id: Optional[int] = None,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
     expire = datetime.utcnow() + expires_delta
-    to_encode = {"sub": subject, "exp": expire}
+    to_encode = {
+        "sub": subject,
+        "role": role,
+        "user_id": user_id,
+        "exp": expire,
+    }
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
@@ -34,4 +44,13 @@ def decode_access_token(token: str) -> Optional[str]:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def decode_token_payload(token: str) -> Optional[dict]:
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        return payload
+    except JWTError:
+        return None
+
 

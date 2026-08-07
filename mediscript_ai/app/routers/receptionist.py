@@ -13,10 +13,15 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.core.database import get_db
 from app.models.models import ForwardQueue, Prescription, User
+from app.core.deps import require_role, get_current_user
+from app.services.audit_service import log_audit_event
 
-from app.core.deps import require_role
+router = APIRouter(
+    prefix="/receptionist",
+    tags=["receptionist"],
+    dependencies=[Depends(require_role("receptionist", "admin"))]
+)
 
-router = APIRouter(prefix="/receptionist", tags=["receptionist"], dependencies=[Depends(require_role("receptionist"))])
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 
@@ -99,6 +104,7 @@ def receptionist_panel(request: Request, db: Session = Depends(get_db)) -> Any:
 @router.get("/search")
 def search_patients(
     q: str = "",
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Any:
     q = q.strip()
@@ -120,11 +126,24 @@ def search_patients(
         if len(results) >= 20:
             break
 
+    log_audit_event(
+        db,
+        actor_user=current_user,
+        action="PATIENT_SEARCH",
+        resource_type="patient",
+        details={"query": q, "results_count": len(results)}
+    )
+    db.commit()
+
     return JSONResponse({"results": results})
 
 
 @router.post("/forward")
-async def forward_to_doctor(request: Request, db: Session = Depends(get_db)) -> Any:
+async def forward_to_doctor(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
     form = await request.form()
     prescription_id = int(form.get("prescription_id") or 0)
     doctor_id = form.get("doctor_id") or None
@@ -137,7 +156,7 @@ async def forward_to_doctor(request: Request, db: Session = Depends(get_db)) -> 
 
     fq = ForwardQueue(
         prescription_id=prescription_id,
-        forwarded_by=1,  # demo: receptionist user id placeholder
+        forwarded_by=current_user.id,
         doctor_id=int(doctor_id) if doctor_id else None,
         priority=priority,
         note=note or None,
@@ -148,9 +167,19 @@ async def forward_to_doctor(request: Request, db: Session = Depends(get_db)) -> 
 
     # Update prescription status
     prescription.status = "forwarded"
+
+    log_audit_event(
+        db,
+        actor_user=current_user,
+        action="FORWARD_TO_DOCTOR",
+        resource_type="prescription",
+        resource_id=str(prescription_id),
+        details={"assigned_doctor_id": doctor_id, "priority": priority}
+    )
     db.commit()
 
     return JSONResponse({"success": True, "message": f"Forwarded to doctor queue with {priority} priority."})
+
 
 
 @router.get("/activity")

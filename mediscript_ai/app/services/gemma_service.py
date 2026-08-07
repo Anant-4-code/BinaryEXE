@@ -5,9 +5,11 @@ import httpx
 
 from app.config import get_settings
 from app.schemas.schemas import GemmaMedicine, ExtractionResult
+from app.services.deid_service import DeidService
 
 
 settings = get_settings()
+
 
 LLM_EXTRACTION_PROMPT = """You are a medical prescription extraction assistant. Your task is to accurately extract medicine data from the provided OCR text.
 

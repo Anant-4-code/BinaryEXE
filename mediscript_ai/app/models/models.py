@@ -14,13 +14,72 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
     phone = Column(String(50), nullable=True)
-    role = Column(String(50), default="patient")  # patient | receptionist | doctor
+    role = Column(String(50), default="patient")  # patient | receptionist | doctor | admin
+    is_active = Column(Boolean, default=True)
+    mfa_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     prescriptions = relationship("Prescription", back_populates="user", foreign_keys="Prescription.user_id")
     forward_actions = relationship("ForwardQueue", back_populates="forwarded_by_user", foreign_keys="ForwardQueue.forwarded_by")
     doctor_verifications = relationship("ForwardQueue", back_populates="doctor_user", foreign_keys="ForwardQueue.doctor_id")
     doctor_notes = relationship("DoctorNote", back_populates="doctor")
+    doctor_profile = relationship("DoctorProfile", back_populates="user", uselist=False, foreign_keys="DoctorProfile.user_id")
+    receptionist_profile = relationship("ReceptionistProfile", back_populates="user", uselist=False, foreign_keys="ReceptionistProfile.user_id")
+    patient_profile = relationship("PatientProfile", back_populates="user", uselist=False, foreign_keys="PatientProfile.user_id")
+
+
+class DoctorProfile(Base):
+    __tablename__ = "doctor_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    specialization = Column(String(255), nullable=True)
+    department = Column(String(255), nullable=True)
+    license_number = Column(String(255), nullable=True)
+
+    user = relationship("User", back_populates="doctor_profile", foreign_keys=[user_id])
+
+
+class ReceptionistProfile(Base):
+    __tablename__ = "receptionist_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    desk_location = Column(String(255), nullable=True)
+
+    user = relationship("User", back_populates="receptionist_profile", foreign_keys=[user_id])
+
+
+class PatientProfile(Base):
+    __tablename__ = "patient_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    patient_code = Column(String(50), unique=True, index=True, nullable=False)
+    dob = Column(Date, nullable=True)
+    gender = Column(String(20), nullable=True)
+    address_encrypted = Column(Text, nullable=True)
+    registered_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", back_populates="patient_profile", foreign_keys=[user_id])
+    registrar = relationship("User", foreign_keys=[registered_by])
+
+
+
+class AuditLog(Base):
+    """Immutable audit log for HIPAA and DPDP compliance."""
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    actor_role = Column(String(50), nullable=True)
+    action = Column(String(100), nullable=False)  # VIEW_REPORT, EDIT_DETECTION, FINALIZE_REPORT, etc.
+    resource_type = Column(String(50), nullable=False)  # scan, report, patient, prescription
+    resource_id = Column(String(100), nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    details_json = Column(Text, nullable=True)
+    occurred_at = Column(DateTime, default=datetime.utcnow, index=True)
+
 
 
 class PrescriptionStatusEnum(str):

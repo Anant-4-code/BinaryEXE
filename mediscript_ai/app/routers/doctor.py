@@ -16,10 +16,15 @@ from app.models.models import (
     DoctorNote, ForwardQueue, Medicine, Prescription, PrescriptionStatusEnum, User
 )
 from app.services.analytics_service import compute_analytics_for_prescription
+from app.core.deps import require_role, get_current_user
+from app.services.audit_service import log_audit_event
 
-from app.core.deps import require_role
+router = APIRouter(
+    prefix="/doctor",
+    tags=["doctor"],
+    dependencies=[Depends(require_role("doctor", "admin"))]
+)
 
-router = APIRouter(prefix="/doctor", tags=["doctor"], dependencies=[Depends(require_role("doctor"))])
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.base_dir / "app" / "templates"))
 
@@ -306,14 +311,16 @@ def doctor_prescription(
 
 @router.post("/prescription/{prescription_id}/verify")
 async def verify_prescription(
-    prescription_id: int, db: Session = Depends(get_db)
+    prescription_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ) -> Any:
     prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
     if not prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
 
     prescription.status = "verified"
-    prescription.verified_by = DEMO_DOCTOR["id"]
+    prescription.verified_by = current_user.id
     prescription.verified_at = datetime.utcnow()
     prescription.reject_reason = None
 
@@ -323,12 +330,25 @@ async def verify_prescription(
             fq.status = "verified"
             fq.reviewed_at = datetime.utcnow()
 
+    log_audit_event(
+        db,
+        actor_user=current_user,
+        action="VERIFY_PRESCRIPTION",
+        resource_type="prescription",
+        resource_id=str(prescription_id),
+        details={"status": "verified"}
+    )
     db.commit()
     return JSONResponse({"success": True, "message": "Prescription verified successfully."})
 
 
 @router.post("/prescription/{prescription_id}/reject")
-async def reject_prescription(request: Request, prescription_id: int, db: Session = Depends(get_db)) -> Any:
+async def reject_prescription(
+    request: Request,
+    prescription_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
     form = await request.form()
     reason = (form.get("reason") or "").strip()
 
@@ -344,8 +364,17 @@ async def reject_prescription(request: Request, prescription_id: int, db: Sessio
             fq.status = "rejected"
             fq.reviewed_at = datetime.utcnow()
 
+    log_audit_event(
+        db,
+        actor_user=current_user,
+        action="REJECT_PRESCRIPTION",
+        resource_type="prescription",
+        resource_id=str(prescription_id),
+        details={"reason": prescription.reject_reason}
+    )
     db.commit()
     return JSONResponse({"success": True, "message": "Prescription rejected."})
+
 
 
 @router.post("/prescription/{prescription_id}/note")
