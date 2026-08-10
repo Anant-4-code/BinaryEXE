@@ -21,10 +21,8 @@ def home(request: Request, db: Session = Depends(get_db)) -> Any:
         db.query(Prescription).order_by(Prescription.created_at.desc()).limit(20).all()
     )
     return templates.TemplateResponse(
+        request,
         "home.html",
-        {
-            "request": request,
-            "prescriptions": prescriptions,
-        },
+        {"prescriptions": prescriptions},
     )
 
