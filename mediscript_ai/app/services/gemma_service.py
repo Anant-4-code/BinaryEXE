@@ -35,12 +35,12 @@ async def call_gemma(raw_text: str) -> ExtractionResult:
     prompt = LLM_EXTRACTION_PROMPT.format(raw_text=raw_text)
 
     payload = {
-        "model": "llama3.2:3b",
+        "model": settings.ollama_model,
         "prompt": prompt,
         "stream": False,
     }
 
-    async with httpx.AsyncClient(base_url="http://localhost:11434", timeout=120) as client:
+    async with httpx.AsyncClient(base_url=settings.ollama_base_url, timeout=120) as client:
         response = await client.post("/api/generate", json=payload)
         response.raise_for_status()
         data = response.json()

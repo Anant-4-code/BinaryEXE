@@ -34,9 +34,9 @@ async def workspace_view(
     analytics = compute_analytics_for_prescription(db, prescription_id)
 
     return templates.TemplateResponse(
+        request,
         "workspace.html",
         {
-            "request": request,
             "prescription": prescription,
             "tab": tab,
             "analytics": analytics,
